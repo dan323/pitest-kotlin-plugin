@@ -1,0 +1,66 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What this is
+
+A free PIT (pitest) plugin that improves mutation testing of Kotlin code. PIT works on JVM bytecode, never Kotlin source, so everything here is written against the bytecode that `kotlinc` emits. Package: `io.github.dan323.pitkotlin`.
+
+The plugin has two parts: **interceptors (filters)** that drop noisy mutants, and **mutators** that add Kotlin-specific ones. Mutators are opt-in: `mutators = ["DEFAULTS", "KOTLIN"]`. Currently: elvis (`?:`), safe-call (`?.`) and a stdlib method swap; `!!` is not started (PIT's void-call removal already covers `Intrinsics.checkNotNull`).
+
+## Commands
+
+```
+./gradlew test                                  # all tests
+./gradlew test --tests '*FiltersTest*'          # one class
+./gradlew test --tests '*FiltersTest.inlined*'  # one test (backtick names: match a substring)
+./gradlew jar                                   # build/libs/pitest-kotlin-plugin-0.1.0-SNAPSHOT.jar
+```
+
+End-to-end check against a real PIT run (separate Gradle build in `e2e/`; it consumes the **published coordinates** from `mavenLocal()`, so publish first: `./gradlew publishToMavenLocal`, optionally with `-Dmaven.repo.local=<dir>` on both builds to keep `~/.m2` untouched):
+
+```
+cd e2e
+gradle pitest                                                                    # filters on  -> build/reports/filtered
+gradle pitest -Pfeatures="-FKTINLINE,-FKTINTRINSICS,-FKTCORO,-FKTUNIT,-FKTFORINLINE,-FKTELVISDEDUP" -PreportName=reports/baseline
+```
+
+Compare the two `mutations.xml` files to see exactly which mutants a filter removed.
+
+## Architecture
+
+- `KotlinFilterSupport.kt`: `KotlinMutationFilter` (base `MutationInterceptor`, type `FILTER`; subclasses implement only `shouldDrop(MutationDetails)`) and `KotlinFilterFactory` (base `MutationInterceptorFactory`, supplies the PIT `Feature`). Also bytecode helpers (`realBefore`/`realAfter` skip labels/line numbers/frames).
+- One filter + factory per file. Each factory must be listed in `src/main/resources/META-INF/services/org.pitest.mutationtest.build.MutationInterceptorFactory`, or PIT will not find it. `ServiceRegistrationTest` checks the registered feature names.
+- Filters: `FKTINLINE` (mutants in code inlined from the Kotlin stdlib, detected via the class's SMAP / `SourceDebugExtension`; options `+FKTINLINE(scope[all])`, `+FKTINLINE(prefixes[arrow/])`, `+FKTINLINE(predicates[drop])`), `FKTINTRINSICS` (compiler-generated null checks and the `lateinit` guard; user `!!` = `Intrinsics.checkNotNull` is deliberately kept), `FKTCORO` (state-machine plumbing: `throwOnFailure`, `COROUTINE_SUSPENDED` comparisons and returns), `FKTUNIT` (return-value mutants on `getstatic kotlin/Unit.INSTANCE; areturn`), `FKTELVISDEDUP` (see mutators below), `FKTFORINLINE` (every mutant in `name$$forInline` methods: never-called copies of inline suspend functions). `FKTINTRINSICS` also drops `InlineMarker.mark` calls.
+- Mutators (`KotlinElvisMutators.kt`; one `NullBranchMethodVisitor` handles `dup; ifnonnull/ifnull L` and is shared by the elvis and safe-call mutators): `KOTLIN_ELVIS_ALWAYS_DEFAULT` / `KOTLIN_ELVIS_NEVER_DEFAULT` for `dup; ifnonnull L; pop; <default>`; a survivor says which side is untested. PIT 1.30.2 already has these, under other names: `REMOVE_CONDITIONALS_EQUAL_ELSE` (in `DEFAULTS`) is byte-identical to NEVER, `REMOVE_CONDITIONALS_EQUAL_IF` (in `STRONGER`) to ALWAYS, and `NEGATE_CONDITIONALS` (only in `ALL`) is the both-sides flip. So ALWAYS is what `DEFAULTS` lacks. `KOTLIN_SAFECALL_NEVER_NULL` (`dup; ifnull L`, replaced by `pop`, so the call runs on a null receiver) is the one safe-call side `DEFAULTS` lacks: `EQUAL_ELSE` already makes `a?.f()` always null, and `EQUAL_IF` (STRONGER) is byte-identical to it, which is why no always-null mutator exists. `lateinit` guards share the `dup; ifnull` shape and rely on `FKTINTRINSICS` to drop their mutants. `FKTELVISDEDUP` (also covers safe calls) drops each built-in only when its equivalent from this plugin is present at the same instruction (`ElvisDuplicateFilterTest` proves the byte equality). No custom engine is needed: PIT's `Mutator` loads every `MethodMutatorFactory` and `MutatorGroup` service (registered in `META-INF/services`), and the `KOTLIN` group bundles ours. They must be plain classes with a public no-arg constructor.
+- Mutators visit bytecode through PIT's **shaded ASM** (`org.pitest.reloc.asm`), unlike interceptors, which use `org.objectweb.asm` via `ClassTree`.
+- Feature names are lower-cased by PIT (`feature.name()` returns `fktinline`), but users toggle them as `+FKTINLINE` / `-FKTINLINE`.
+- PIT is `compileOnly`. Because the filters are Kotlin, `kotlin-stdlib` must be on PIT's plugin classpath at runtime (`e2e/build.gradle.kts` adds it explicitly).
+
+## Things that are not obvious
+
+- PIT 1.30.2 already ships a Kotlin filter that drops every mutant on **line 0** in `.kt` files. That covers data-class generated methods, `$default` methods, `$WhenMappings` and parameter null checks, so do not write filters for those. Measure first: mutants that survive line 0 filtering are the only ones worth filtering. `FilterTestSupport.run` mirrors this by discarding line-0 mutants before applying a filter.
+- `MutationDetails.getInstructionIndex()` indexes the full ASM instruction list including labels, line numbers and frames (`opcode == -1`). Use `MethodTree.instructions()` with that index, as the filters do.
+- Bytecode shapes were observed with Kotlin 2.4.21. They can differ across Kotlin versions (e.g. the `lateinit` throw sits on the jump target, not the fall-through path), so verify new patterns with `javap -p -c` on the compiled fixtures in `build/classes/kotlin/test/fixtures`.
+- Tests compile the Kotlin fixtures in `src/test/kotlin/fixtures/Fixtures.kt` and run PIT's real `GregorMutater` with default mutators over them (`FilterTestSupport`). Add a fixture there when adding a filter. `FiltersTest` asserts both what is dropped and what must be kept.
+- Target is JVM 17 (`jvmTarget` and `options.release`); the installed JDK is newer, so `JavaCompile` needs `options.release = 17` or Kotlin/Java target validation fails (also in `e2e`).
+- Validate every new filter by the baseline status of what it removes: dropping `KILLED` mutants means the pattern may be real logic. A rule that nulled `aload n; areturn` after `throwOnFailure` was reverted because that `areturn` is a merge point also reached on immediate completion, so the mutant is meaningful. Compare per-filter runs (`-Pfeatures` with the other filters off) against the baseline `mutations.xml`.
+- `FKTINLINE` defaults to stdlib-only (`kotlin/`, `kotlinx/` origins from the SMAP file section): the project's own `inline` functions, especially `inline reified` ones, are only ever executed through their inlined copies, so dropping those would hide real logic. `scope[all]` drops everything inlined. PIT hands feature options to the factory via `InterceptorParameters`; `getList` returns **null** (not empty) when other options are set but that one is absent, and `getString` is only safe through `Optional`. `ServiceRegistrationTest` covers these paths.
+- Lambdas that are not suspend compile to `invokedynamic` plus a synthetic `name$lambda$N` method on the enclosing class (Kotlin 2.x), not a separate class; suspend lambdas still get their own `Outer$name$N` class.
+- PIT cannot see logic in `inline` functions: callers get a copy of the body, so tests execute the copy in the *test* class and the declaring class shows `NO_COVERAGE`. On inline-heavy code (kotlin-result: 93 of 204 functions inline) about 90% of mutants are uncovered no matter what these filters do. This is a PIT limitation, not something a filter can fix; mutating inlined copies would need `targetClasses` to include the callers.
+- Zsh does not word-split unquoted variables: in measurement scripts use `for x in A B C` literally or build the `-Pfeatures` string with `${off%,}`.
+- A mutator must register its mutation **in the coverage block that tests need to reach**. PIT only runs tests that covered that block. The elvis mutants first registered at the default branch, so `ALWAYS_DEFAULT` was never run by tests taking the non-null path: it showed false survivors and `NO_COVERAGE`. They now register at the `ifnonnull` jump; `ElvisMutatorsTest` asserts the block matches PIT's own conditional mutant at that index. Registration happens during streaming, so lookahead means buffering events, and the registered instruction index is the one current at registration time.
+- Test mutators by executing them: `MutantSet` (test support) loads the mutated bytecode in a child-first classloader, so the JVM verifier and real behavior are both checked, including the dead code after a `goto`.
+- Check what PIT already does before building a mutator: the description in the XML report can differ from the unit-level one (the report showed "negated conditional" for what is `REMOVE_CONDITIONALS_EQUAL_ELSE`), and the built-in set differs per group. Dump all mutants at one instruction across `DEFAULTS`/`STRONGER`/`ALL` and compare executed behavior or class bytes.
+- Mutant status can flip between identical PIT runs on a corpus with state-dependent tests (mockito-kotlin: about 3 of 248). Compare per-site before blaming a code change.
+- Safe-call mutants can be equivalent and bytecode cannot tell: the inner link of `a?.b()?.c()` when `b()` is non-null, and `x?.let { setter(it) }` where the setter accepts null. On mockito-kotlin the 3 surviving mutants of 14 were of the second kind.
+- `KOTLIN_STDLIB_SWAP` (`KotlinStdlibSwapMutator.kt`) replaces a static stdlib call with its opposite (`first`/`last`, `take`/`drop`, `startsWith`/`endsWith`, `coerceAtLeast`/`coerceAtMost`, `Math.max`/`min`, ...). PIT has no such mutator. Rules that make it safe: the pair must share the exact descriptor (so the class still verifies), each call has exactly one partner (mutant ids are unique per instruction and mutator), and call sites name the **facade** (`kotlin/collections/CollectionsKt`), not the `___CollectionsKt` file class. Inline functions (`filter`, `any`, `map`...) leave no call and cannot be swapped. `StdlibSwapMutatorTest` checks every table entry by reflection against the stdlib on the classpath, so adding or bumping a stdlib version cannot silently break the table; when adding an entry, compile a fixture and read the real call site with `javap -c` first. Yield is low (mockito-kotlin 3, kotlin-result 0), all killed.
+- Inlined predicate lambdas (`filter { }`, `any { }`, `all`, `count`, `first`, `takeWhile`, `partition`...): the compiler marks each inlined lambda with a local variable `$i$a$-<function>-...` whose range ends where the result is produced, and the first real instruction after it is the `ifeq`/`ifne` in stdlib code that acts on it. That jump sits in synthetic lines, so `FKTINLINE` used to drop its mutants, which are exactly the "does the predicate matter" questions (`filter`/`filterNot`, `any`/`all`). It now keeps them, reports them on the lambda's own line (`filter{} predicate: ...`; the synthetic line is past the end of the file) and keeps their id and block. No new mutator was needed: PIT already makes these mutants (`REMOVE_CONDITIONALS_EQUAL_ELSE` in `DEFAULTS` is "predicate is false", `EQUAL_IF` in `STRONGER` "is true", `NEGATE_CONDITIONALS` in `ALL` is the real `filter`/`filterNot` swap). A mutator could not do this anyway: it streams bytecode and the local variable table arrives after the code, whereas an interceptor has the whole `ClassTree`.
+- `@InlineOnly` functions (e.g. `find` delegating to `firstOrNull`) get the **call site's line** for their inlined body, so the SMAP shows nothing and `FKTINLINE` neither drops nor relabels their loop mechanics. Known limitation; a fix would key off `$i$f$<function>` ranges, but those do not say whether the function is stdlib or the project's own.
+- Rewriting `MutationDetails` in an interceptor is fine (they are built before tests are assigned): the constructor takes id, filename, description, line and blocks, so a relocated mutant keeps its id.
+
+## Publishing
+
+- Built with `com.vanniktech.maven.publish` (`build.gradle.kts`): sources jar, an empty javadoc jar (no API docs are needed to use a PIT plugin) and the POM come from there. Coordinates `io.github.dan323:pitest-kotlin-plugin`, Apache-2.0, repository `github.com/dan323/pitest-kotlin-plugin` (POM `url`/`scm` point there, and a Central `io.github.<user>` namespace is verified through that GitHub account, so the repo must exist before a release).
+- Signing is only enabled when `signingInMemoryKey` or `signing.keyId` is set, so `publishToMavenLocal` needs no key. Central credentials come from `ORG_GRADLE_PROJECT_mavenCentralUsername` / `...Password`, never from files. Do not run `publishToMavenCentral` or push to GitHub without the user's explicit go-ahead.
+- The published POM must stay dependency-light: PIT is `compileOnly` and must not appear in it; `kotlin-stdlib` must.

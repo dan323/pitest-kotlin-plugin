@@ -1,0 +1,151 @@
+package fixtures
+
+import java.util.concurrent.TimeUnit
+import kotlin.coroutines.suspendCoroutine
+
+class NullChecks(val name: String) {
+    lateinit var late: String
+
+    fun greet(other: String): String = "hi " + other + name.length
+
+    fun readLate(): Int = late.length
+
+    fun bang(s: String?): Int = s!!.length
+}
+
+class WhenUser {
+    fun describe(unit: TimeUnit): Int =
+        when (unit) {
+            TimeUnit.SECONDS -> 1
+            TimeUnit.MINUTES -> 2
+            else -> 3
+        }
+}
+
+class Defaults {
+    fun add(a: Int = 5, b: Int = 3): Int = a + b
+}
+
+data class Generated(val a: Int, val b: String)
+
+data class CustomToString(val a: Int) {
+    override fun toString(): String = if (a > 0) "positive" else "other"
+}
+
+class Coroutines {
+    suspend fun inner(x: Int): Int = suspendCoroutine { it.resumeWith(Result.success(x)) }
+
+    suspend fun outer(x: Int): Int {
+        val first = inner(x)
+        return if (first > 1) inner(first) + 1 else 0
+    }
+}
+
+inline fun twice(block: () -> Int): Int = block() + block()
+
+class Inlines {
+    fun mapped(list: List<Int>): List<Int> = list.map { it + 1 }.filter { it > 2 }
+
+    fun own(): Int = twice { 3 }
+
+    fun platform(): String = System.getenv("HOME")
+}
+
+class Lambdas {
+    fun unitLambda(): () -> Unit = { println("x") }
+
+    fun tailSuspend(c: Coroutines): suspend () -> Int = { c.inner(1) }
+}
+
+suspend inline fun forwardInline(block: () -> Int): Int = Coroutines().inner(block()) + 1
+
+suspend inline fun <T> scoped(crossinline block: suspend () -> T): T = kotlinx.coroutines.coroutineScope { block() }
+
+class InlineSuspend {
+    suspend fun use(): Int = forwardInline { 2 }
+
+    suspend fun nested(c: Coroutines): Int = scoped { scoped { c.inner(1) } + 1 }
+}
+
+class Elvis {
+    fun plain(s: String?): String = s ?: "default"
+
+    fun afterSafeCall(s: String?): Int = s?.length ?: 0
+
+    fun fromMap(m: Map<String, String>, k: String): String = m[k] ?: "none"
+
+    fun earlyReturn(s: String?): String {
+        val t = s ?: return "early"
+        return t + "!"
+    }
+
+    fun orThrow(s: String?): String = s ?: throw IllegalStateException("x")
+
+    fun local(s: String?): String {
+        val x = s
+        return x ?: "d"
+    }
+
+    fun chain(a: String?, b: String?): String = a ?: b ?: "z"
+
+    fun safeCallOnly(s: String?): String? = s?.trim()
+
+    fun userNullCheck(s: String?): String = if (s == null) "n" else s
+
+    fun notElvis(x: Int): Int = if (x > 0) 1 else 2
+}
+
+class SafeCalls {
+    var counter = 0
+
+    fun value(s: String?): String? = s?.trim()
+
+    fun length(s: String?): Int? = s?.length
+
+    fun chained(s: String?): Int? = s?.trim()?.length
+
+    fun statement(s: String?) {
+        s?.let { counter += it.length }
+    }
+
+    fun letResult(s: String?): String? = s?.let { it + "!" }
+}
+
+class Swaps {
+    fun first(l: List<Int>): Int = l.first()
+    fun last(l: List<Int>): Int = l.last()
+    fun firstOrNull(l: List<Int>): Int? = l.firstOrNull()
+    fun take(l: List<Int>): List<Int> = l.take(2)
+    fun takeLast(l: List<Int>): List<Int> = l.takeLast(2)
+    fun drop(l: List<Int>): List<Int> = l.drop(2)
+    fun maxOrNull(l: List<Int>): Int? = l.maxOrNull()
+    fun minOrNull(l: List<Int>): Int? = l.minOrNull()
+    fun sorted(l: List<Int>): List<Int> = l.sorted()
+    fun atLeast(x: Int): Int = x.coerceAtLeast(5)
+    fun atMost(x: Int): Int = x.coerceAtMost(5)
+    fun startsWith(s: String): Boolean = s.startsWith("ab")
+    fun endsWith(s: String): Boolean = s.endsWith("ab")
+    fun strTake(s: String): String = s.take(2)
+    fun strDrop(s: String): String = s.drop(2)
+    fun before(s: String): String = s.substringBefore("-")
+    fun after(s: String): String = s.substringAfter("-")
+    fun indexOf(s: String): Int = s.indexOf("b")
+    fun strFirst(s: String): Char = s.first()
+    fun seqTake(s: Sequence<Int>): List<Int> = s.take(2).toList()
+    fun maxInt(a: Int, b: Int): Int = maxOf(a, b)
+    fun minInt(a: Int, b: Int): Int = kotlin.math.min(a, b)
+    fun trimS(s: String): String = s.trimStart()
+}
+
+class Predicates {
+    fun filter(l: List<Int>): List<Int> = l.filter { it > 2 }
+    fun filterNot(l: List<Int>): List<Int> = l.filterNot { it > 2 }
+    fun any(l: List<Int>): Boolean = l.any { it > 2 }
+    fun all(l: List<Int>): Boolean = l.all { it > 2 }
+    fun none(l: List<Int>): Boolean = l.none { it > 2 }
+    fun count(l: List<Int>): Int = l.count { it > 2 }
+    fun first(l: List<Int>): Int = l.first { it > 2 }
+    fun find(l: List<Int>): Int? = l.find { it > 2 }
+    fun takeWhile(l: List<Int>): List<Int> = l.takeWhile { it < 3 }
+    fun partition(l: List<Int>): Pair<List<Int>, List<Int>> = l.partition { it > 2 }
+}
