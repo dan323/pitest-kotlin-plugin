@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Unit tests (JDK ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [17, 21]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Test
+        run: ./gradlew test --stacktrace
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-jdk${{ matrix.java }}
+          path: build/reports/tests/
+
+  e2e:
+    name: PIT end-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Publish the plugin to the local Maven repository
+        run: ./gradlew publishToMavenLocal --stacktrace
+      - name: Run PIT with the published plugin on the sample project
+        run: ./gradlew -p e2e pitest -Pmutators=DEFAULTS,KOTLIN --stacktrace
+      - name: Check that the plugin was active in the PIT run
+        run: |
+          report=e2e/build/reports/pitest/mutations.xml
+          test -f "$report"
+          # FKTINLINE relabels the inlined filter { } predicate; without the plugin there is no such mutant.
+          grep -q 'filter{} predicate' "$report"
+      - name: Upload the PIT report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pit-report
+          path: e2e/build/reports/pitest/
