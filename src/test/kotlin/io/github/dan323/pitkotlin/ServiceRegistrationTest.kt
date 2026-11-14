@@ -26,7 +26,7 @@ class ServiceRegistrationTest {
         val factory = KotlinInlinedCodeFilterFactory()
         fun params(settings: Map<String, List<String>>?) = InterceptorParameters(
             settings?.let { FeatureSetting("FKTINLINE", ToggleStatus.ACTIVATE, it) },
-            ReportOptions(), null, null, null, null,
+            ReportOptions(), null, null, null, null, null,
         )
         // No settings at all, settings without the keys, and a fully specified setting.
         factory.createInterceptor(params(null))
