@@ -1,5 +1,8 @@
 # PIT Kotlin plugin
 
+[![CI](https://github.com/dan323/pitest-kotlin-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/dan323/pitest-kotlin-plugin/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+
 A free plugin for [PIT](https://pitest.org) mutation testing that makes it work better on Kotlin. PIT mutates JVM
 bytecode and knows nothing about Kotlin, so on Kotlin code it reports a lot of mutants that no test could or should
 kill, and it misses some that matter. This plugin does two things:
