@@ -20,24 +20,11 @@ import org.pitest.mutationtest.engine.MutationDetails
  */
 class KotlinMessageFilter : KotlinMutationFilter() {
     override fun shouldDrop(mutation: MutationDetails): Boolean {
-        val kind = when {
-            mutation.mutator == KotlinElvisNeverDefaultMutator::class.java.name -> Jump.ELVIS
-            mutation.mutator.endsWith("RemoveConditionalMutator_EQUAL_ELSE") -> Jump.ELVIS
-            mutation.mutator == KotlinSafeCallNeverNullMutator::class.java.name -> Jump.SAFE_CALL
-            else -> return false
-        }
         val insns = methodOf(mutation)?.instructions() ?: return false
-        val jump = insns.getOrNull(mutation.instructionIndex) ?: return false
-        val expected = if (kind == Jump.ELVIS) Opcodes.IFNONNULL else Opcodes.IFNULL
-        if (jump.opcode != expected) return false
-        val dup = insns.realBefore(mutation.instructionIndex) ?: return false
-        if (dup.opcode != Opcodes.DUP) return false
-        val dupIndex = insns.indexOf(dup)
-        val call = insns.realBefore(dupIndex) as? MethodInsnNode ?: return false
+        val dup = NullSites.neverNullDup(mutation, insns) ?: return false
+        val call = insns.realBefore(dup) as? MethodInsnNode ?: return false
         return call.name in MESSAGE_GETTERS && call.desc == "()Ljava/lang/String;" && call.opcode != Opcodes.INVOKESTATIC
     }
-
-    private enum class Jump { ELVIS, SAFE_CALL }
 
     private companion object {
         val MESSAGE_GETTERS = setOf("getMessage", "getLocalizedMessage")

@@ -164,3 +164,21 @@ class Messages {
     // A property called `message` that is not a Throwable's is still a getter named getMessage, so it is dropped too (documented).
     fun explicitCheck(e: Exception): String = if (e.message == null) "none" else e.message!!
 }
+
+class NonNulls {
+    private fun stamp(n: Long): String = "t$n"
+
+    private fun maybe(n: Long): String? = if (n > 0) "t$n" else null
+
+    private fun viaJava(n: Long): java.time.Instant = java.time.Instant.EPOCH.plusSeconds(n)
+
+    fun letElvis(l: Long?): String = l?.let { stamp(it) } ?: "none"
+
+    fun nullableLetElvis(l: Long?): String = l?.let { maybe(it) } ?: "none"
+
+    fun platformLet(l: Long?): java.time.Instant = l?.let { viaJava(it) } ?: java.time.Instant.MAX
+
+    fun matchChain(r: Regex, v: String): String = r.find(v)?.groupValues?.get(1)?.trim() ?: "none"
+
+    fun mapElvis(m: Map<String, String>, k: String): String = m[k] ?: "d"
+}
