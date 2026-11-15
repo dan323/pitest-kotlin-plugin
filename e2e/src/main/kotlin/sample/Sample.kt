@@ -13,6 +13,8 @@ class Sample {
 
     fun failure(e: Exception): String = e.message ?: "unknown error"
 
+    fun stamp(n: Long?): String = n?.let { "t$it" } ?: "none"
+
     suspend fun fetch(x: Int): Int = suspendCoroutine { it.resumeWith(Result.success(x)) }
 
     suspend fun compute(x: Int): Int {

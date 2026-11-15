@@ -23,7 +23,12 @@ dependencies {
 
 pitest {
     pitestVersion = "1.30.2"
-    mutators = setOf("DEFAULTS", "KOTLIN")   // optional: adds the Kotlin mutators below
+    // optional: adds the Kotlin mutators below. Do not write setOf("DEFAULTS", "KOTLIN"), see "Mutator sets" below.
+    mutators = setOf(
+        "NEGATE_CONDITIONALS", "CONDITIONALS_BOUNDARY", "MATH", "INCREMENTS", "INVERT_NEGS", "VOID_METHOD_CALLS",
+        "EMPTY_RETURNS", "FALSE_RETURNS", "TRUE_RETURNS", "NULL_RETURNS", "PRIMITIVE_RETURNS",
+        "KOTLIN",
+    )
     // features = setOf("-FKTINLINE")         // optional: switch a filter off, or pass it options
 }
 ```
@@ -43,6 +48,7 @@ Each is a PIT feature, on by default. Switch one off with `-NAME`, e.g. `feature
 | `FKTUNIT` | Return-value mutants on `return Unit.INSTANCE`. |
 | `FKTFORINLINE` | Everything in `name$$forInline` methods, copies of inline suspend functions that nothing calls. |
 | `FKTMESSAGE` (**off by default**, enable with `+FKTMESSAGE`) | The "never null" mutants on `Throwable.message`: `e.message ?: "x"` (`KOTLIN_ELVIS_NEVER_DEFAULT` and PIT's identical `REMOVE_CONDITIONALS_EQUAL_ELSE`) and `e.message?.f()` (`KOTLIN_SAFECALL_NEVER_NULL`). Only a test that throws an exception without a message can kill them. The "always default" mutant stays: any test that asserts the failure message kills it. It is a heuristic (a real `NullPointerException()` has no message), hence opt-in. |
+| `FKTNONNULL` | The "never null" side of an elvis or safe call (`KOTLIN_ELVIS_NEVER_DEFAULT`, `KOTLIN_SAFECALL_NEVER_NULL`, PIT's identical `REMOVE_CONDITIONALS_EQUAL_ELSE` / `_EQUAL_IF`) when the value cannot be null: it comes from a `@NotNull` call (the whole Kotlin stdlib, e.g. `MatchResult.groupValues`, `MatchGroup.value`), a string constant or concatenation, a `checkNotNullExpressionValue`, or a private/final method of your own whose every return is one of these. Kotlin emits the check anyway; the mutant is equivalent. Anything it cannot prove is kept. |
 | `FKTELVISDEDUP` | PIT's own conditional mutants on an elvis or safe-call jump that the Kotlin mutators below duplicate. |
 
 `FKTINLINE` options, passed as `+FKTINLINE(option[value])`:
@@ -56,7 +62,16 @@ PIT 1.30.2 already drops every mutant on line 0 of a `.kt` file, which covers da
 
 ## Mutators
 
-Select them with `mutators = setOf("DEFAULTS", "KOTLIN")`, or by name.
+Select them with the `KOTLIN` group, or by name, **next to the set you already use** (see below).
+
+### Mutator sets: `DEFAULTS` is not "nothing set"
+
+In PIT 1.30 the `DEFAULTS` group is not what PIT runs when you set no `mutators` at all:
+
+- **unset**: `NEGATE_CONDITIONALS`, `CONDITIONALS_BOUNDARY`, `MATH`, `INCREMENTS`, `INVERT_NEGS`, `VOID_METHOD_CALLS` and the five `*_RETURNS` mutators.
+- **`DEFAULTS`** (written explicitly): the same, except `REMOVE_CONDITIONALS_EQUAL_ELSE` and `REMOVE_CONDITIONALS_ORDER_ELSE` replace `NEGATE_CONDITIONALS`.
+
+So `mutators = setOf("DEFAULTS", "KOTLIN")` silently changes your baseline: on one project the same code scored 85 % unset and 77 % with `DEFAULTS` (same mutant count), before any Kotlin mutator was added. List the classic mutators by name, as in the snippet above, and add `"KOTLIN"` to that list to compare like with like.
 
 | Mutator | `a ?: b` / `a?.f()` / call becomes | Killed by |
 |---|---|---|

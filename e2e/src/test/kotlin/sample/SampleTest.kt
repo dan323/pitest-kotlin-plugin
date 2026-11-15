@@ -20,6 +20,11 @@ class SampleTest {
 
     @Test fun failure() = assertEquals("boom", Sample().failure(IllegalStateException("boom")))
 
+    @Test fun stamp() {
+        assertEquals("t5", Sample().stamp(5))
+        assertEquals("none", Sample().stamp(null))
+    }
+
     @Test fun compute() {
         var out = -1
         val s = Sample()

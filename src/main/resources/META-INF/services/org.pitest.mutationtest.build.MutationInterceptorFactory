@@ -5,3 +5,4 @@ io.github.dan323.pitkotlin.KotlinUnitReturnFilterFactory
 io.github.dan323.pitkotlin.KotlinForInlineFilterFactory
 io.github.dan323.pitkotlin.KotlinElvisDuplicateFilterFactory
 io.github.dan323.pitkotlin.KotlinMessageFilterFactory
+io.github.dan323.pitkotlin.KotlinNonNullFilterFactory
