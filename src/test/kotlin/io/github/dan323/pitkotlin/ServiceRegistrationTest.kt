@@ -8,6 +8,7 @@ import org.pitest.plugin.ToggleStatus
 import java.util.ServiceLoader
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ServiceRegistrationTest {
@@ -17,8 +18,9 @@ class ServiceRegistrationTest {
             .filter { it.javaClass.packageName == "io.github.dan323.pitkotlin" }
             .associate { it.provides().name() to it.provides() }
 
-        assertTrue(ours.keys == setOf("fktinline", "fktintrinsics", "fktcoro", "fktunit", "fktforinline", "fktelvisdedup"), ours.keys.toString())
-        assertTrue(ours.values.all { it.isOnByDefault })
+        assertTrue(ours.keys == setOf("fktinline", "fktintrinsics", "fktcoro", "fktunit", "fktforinline", "fktelvisdedup", "fktmessage"), ours.keys.toString())
+        // FKTMESSAGE is a heuristic that can hide a test gap, so it is opt-in.
+        assertEquals(setOf("fktmessage"), ours.filterValues { !it.isOnByDefault }.keys)
     }
 
     @Test

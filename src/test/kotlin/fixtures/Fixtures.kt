@@ -149,3 +149,18 @@ class Predicates {
     fun takeWhile(l: List<Int>): List<Int> = l.takeWhile { it < 3 }
     fun partition(l: List<Int>): Pair<List<Int>, List<Int>> = l.partition { it > 2 }
 }
+
+class Messages {
+    fun elvis(e: Exception): String = e.message ?: "no message"
+
+    fun localized(e: Throwable): String = e.localizedMessage ?: "none"
+
+    fun safeCall(e: Exception): Int? = e.message?.length
+
+    fun otherElvis(s: String?): String = s ?: "default"
+
+    fun otherSafeCall(s: String?): Int? = s?.length
+
+    // A property called `message` that is not a Throwable's is still a getter named getMessage, so it is dropped too (documented).
+    fun explicitCheck(e: Exception): String = if (e.message == null) "none" else e.message!!
+}

@@ -18,6 +18,8 @@ class SampleTest {
         assertEquals("AB", s.describe())
     }
 
+    @Test fun failure() = assertEquals("boom", Sample().failure(IllegalStateException("boom")))
+
     @Test fun compute() {
         var out = -1
         val s = Sample()

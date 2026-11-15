@@ -42,6 +42,7 @@ Each is a PIT feature, on by default. Switch one off with `-NAME`, e.g. `feature
 | `FKTCORO` | Coroutine state-machine plumbing: `throwOnFailure`, `COROUTINE_SUSPENDED` comparisons and returns. |
 | `FKTUNIT` | Return-value mutants on `return Unit.INSTANCE`. |
 | `FKTFORINLINE` | Everything in `name$$forInline` methods, copies of inline suspend functions that nothing calls. |
+| `FKTMESSAGE` (**off by default**, enable with `+FKTMESSAGE`) | The "never null" mutants on `Throwable.message`: `e.message ?: "x"` (`KOTLIN_ELVIS_NEVER_DEFAULT` and PIT's identical `REMOVE_CONDITIONALS_EQUAL_ELSE`) and `e.message?.f()` (`KOTLIN_SAFECALL_NEVER_NULL`). Only a test that throws an exception without a message can kill them. The "always default" mutant stays: any test that asserts the failure message kills it. It is a heuristic (a real `NullPointerException()` has no message), hence opt-in. |
 | `FKTELVISDEDUP` | PIT's own conditional mutants on an elvis or safe-call jump that the Kotlin mutators below duplicate. |
 
 `FKTINLINE` options, passed as `+FKTINLINE(option[value])`:
