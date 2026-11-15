@@ -85,8 +85,9 @@ internal class NonNull(private val source: ClassByteArraySource?, private val cu
 
     private fun nonNullReturn(call: MethodInsnNode, depth: Int): Boolean {
         if (Type.getReturnType(call.desc).sort != Type.OBJECT) return false
+        // Only final owners: an Object or CharSequence receiver may be a class whose toString() returns null.
         if (call.name == "toString" && call.desc == "()Ljava/lang/String;" &&
-            call.owner in setOf("java/lang/Object", "java/lang/String", "java/lang/StringBuilder", "java/lang/CharSequence")
+            call.owner in setOf("java/lang/String", "java/lang/StringBuilder")
         ) return true
         if (call.name == "<init>") return false
         val (owner, m) = resolve(call.owner, call.name, call.desc) ?: return false
@@ -120,8 +121,7 @@ internal class NonNull(private val source: ClassByteArraySource?, private val cu
         }
     }
 
-    private fun hasNotNull(m: MethodNode): Boolean =
-        (m.visibleAnnotations.orEmpty() + m.invisibleAnnotations.orEmpty()).any { it.desc in NOT_NULL }
+    private fun hasNotNull(m: MethodNode): Boolean = isNotNullAnnotated(m)
 
     /** Previous real instruction, stopping at a label something jumps to (a merge point). */
     private fun previousReal(insns: List<AbstractInsnNode>, index: Int, targets: Set<LabelNode>): Int? {
@@ -151,9 +151,26 @@ internal class NonNull(private val source: ClassByteArraySource?, private val cu
 
     private companion object {
         const val MAX_DEPTH = 3
-        val NOT_NULL = setOf(
-            "Lorg/jetbrains/annotations/NotNull;", "Ljavax/annotation/Nonnull;", "Landroidx/annotation/NonNull;",
-            "Ljakarta/annotation/Nonnull;", "Llombok/NonNull;",
-        )
     }
 }
+
+private val NOT_NULL = setOf("Lorg/jetbrains/annotations/NotNull;", "Landroidx/annotation/NonNull;", "Llombok/NonNull;")
+
+/** JSR-305 `@Nonnull(when = ...)`: only an absent `when` or `ALWAYS` means the result is never null. */
+private val JSR305_NONNULL = setOf("Ljavax/annotation/Nonnull;", "Ljakarta/annotation/Nonnull;")
+
+/** Does the method carry an annotation that promises a non-null result? */
+internal fun isNotNullAnnotated(m: MethodNode): Boolean =
+    (m.visibleAnnotations.orEmpty() + m.invisibleAnnotations.orEmpty()).any { a ->
+        when (a.desc) {
+            in NOT_NULL -> true
+            in JSR305_NONNULL -> {
+                val values = a.values.orEmpty()
+                val whenIndex = values.indices.step(2).firstOrNull { values[it] == "when" }
+                // An enum value is stored as [descriptor, constant name].
+                val whenValue = whenIndex?.let { (values[it + 1] as? Array<*>)?.getOrNull(1) as? String }
+                whenValue == null && whenIndex == null || whenValue == "ALWAYS"
+            }
+            else -> false
+        }
+    }

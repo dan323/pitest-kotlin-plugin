@@ -1,5 +1,7 @@
 package io.github.dan323.pitkotlin
 
+import org.objectweb.asm.tree.AnnotationNode
+import org.objectweb.asm.tree.MethodNode
 import org.pitest.bytecode.analysis.ClassTree
 import org.pitest.classinfo.ClassByteArraySource
 import org.pitest.mutationtest.engine.MutationDetails
@@ -49,15 +51,45 @@ class NonNullFilterTest {
         assertEquals(false, "KotlinElvisNeverDefaultMutator" in names(kept, "platformLet"))
     }
 
+    /** The method called just before the `dup` of the jump this mutant sits on. */
+    private fun calledBefore(m: MutationDetails): String {
+        val insns = tree.methods().first { it.asLocation() == m.id.location }.instructions()
+        val dup = insns.realBefore(m.instructionIndex)!!
+        var i = insns.indexOf(dup)
+        var n = insns.realBefore(i)!!
+        // a generic call is followed by a checkcast to the element type
+        while (n is org.objectweb.asm.tree.TypeInsnNode) { i = insns.indexOf(n); n = insns.realBefore(i)!! }
+        return (n as org.objectweb.asm.tree.MethodInsnNode).name
+    }
+
     @Test
     fun `in a find chain only the link after a NotNull stdlib call goes`() {
-        val before = set.mutants.filter { it.method == "matchChain" && it.mutator.endsWith("KotlinSafeCallNeverNullMutator") }
-        val after = kept.filter { it.method == "matchChain" && it.mutator.endsWith("KotlinSafeCallNeverNullMutator") }
+        val safe = set.mutants.filter { it.method == "matchChain" && it.mutator.endsWith("KotlinSafeCallNeverNullMutator") }
+        val dropped = safe - kept.toSet()
+        val stayed = safe.filter { it in kept }
         // find()? stays (nullable), getGroupValues()? goes (@NotNull), get(1)? stays (generic element, not provable).
-        assertEquals(3, before.size)
-        assertEquals(2, after.size)
-        // the elvis after trim().toString() is non null
-        assertEquals(false, "KotlinElvisNeverDefaultMutator" in names(kept, "matchChain"))
+        assertEquals(listOf("getGroupValues"), dropped.map(::calledBefore))
+        assertEquals(setOf("find\$default", "get"), stayed.map(::calledBefore).toSet())
+        // The elvis after trim().toString() stays: toString() of an arbitrary CharSequence may be null.
+        assertEquals(true, "KotlinElvisNeverDefaultMutator" in names(kept, "matchChain"))
+    }
+
+    private fun method(vararg annotations: AnnotationNode) =
+        MethodNode().also { it.visibleAnnotations = annotations.toList() }
+
+    private fun nonnull(desc: String, whenValue: String?) = AnnotationNode(desc).also {
+        if (whenValue != null) it.values = listOf("when", arrayOf("Ljavax/annotation/meta/When;", whenValue))
+    }
+
+    @Test
+    fun `JSR-305 Nonnull counts only when it is ALWAYS or has no when`() {
+        val jsr = "Ljavax/annotation/Nonnull;"
+        assertEquals(true, isNotNullAnnotated(method(nonnull(jsr, null))))
+        assertEquals(true, isNotNullAnnotated(method(nonnull(jsr, "ALWAYS"))))
+        for (w in listOf("MAYBE", "NEVER", "UNKNOWN")) assertEquals(false, isNotNullAnnotated(method(nonnull(jsr, w))), w)
+        assertEquals(false, isNotNullAnnotated(method(nonnull("Ljakarta/annotation/Nonnull;", "MAYBE"))))
+        assertEquals(true, isNotNullAnnotated(method(AnnotationNode("Lorg/jetbrains/annotations/NotNull;"))))
+        assertEquals(false, isNotNullAnnotated(method(AnnotationNode("Lorg/jetbrains/annotations/Nullable;"))))
     }
 
     @Test
