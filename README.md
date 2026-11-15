@@ -64,14 +64,9 @@ PIT 1.30.2 already drops every mutant on line 0 of a `.kt` file, which covers da
 
 Select them with the `KOTLIN` group, or by name, **next to the set you already use** (see below).
 
-### Mutator sets: `DEFAULTS` is not "nothing set"
-
-In PIT 1.30 the `DEFAULTS` group is not what PIT runs when you set no `mutators` at all:
-
-- **unset**: `NEGATE_CONDITIONALS`, `CONDITIONALS_BOUNDARY`, `MATH`, `INCREMENTS`, `INVERT_NEGS`, `VOID_METHOD_CALLS` and the five `*_RETURNS` mutators.
-- **`DEFAULTS`** (written explicitly): the same, except `REMOVE_CONDITIONALS_EQUAL_ELSE` and `REMOVE_CONDITIONALS_ORDER_ELSE` replace `NEGATE_CONDITIONALS`.
-
-So `mutators = setOf("DEFAULTS", "KOTLIN")` silently changes your baseline: on one project the same code scored 85 % unset and 77 % with `DEFAULTS` (same mutant count), before any Kotlin mutator was added. List the classic mutators by name, as in the snippet above, and add `"KOTLIN"` to that list to compare like with like.
+> **`DEFAULTS` is not "nothing set".** In PIT 1.30 `mutators = setOf("DEFAULTS", "KOTLIN")` swaps `NEGATE_CONDITIONALS` for
+> `REMOVE_CONDITIONALS_*` and changes your baseline score. List the classic mutators by name, as in the snippet above
+> ([details](docs/user-guide.md#mutator-sets-defaults-is-not-nothing-set)).
 
 | Mutator | `a ?: b` / `a?.f()` / call becomes | Killed by |
 |---|---|---|
@@ -94,6 +89,8 @@ Measured with PIT 1.30.2 on two open-source projects (all filters on, `DEFAULTS`
 | [kotlin-result](https://github.com/michaelbull/kotlin-result) (inline heavy) | 1384 -> 478 | Almost all mutants are still uncovered, see below |
 
 Numbers depend on the project and on test flakiness (about 1% of mutants flipped between identical runs).
+
+More detail on every filter and mutator, and how to read survivors: [docs/user-guide.md](docs/user-guide.md).
 
 ## Limitations
 
