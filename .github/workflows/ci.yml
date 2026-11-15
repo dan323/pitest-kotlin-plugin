@@ -57,6 +57,12 @@ jobs:
           test -f "$report"
           # FKTINLINE relabels the inlined filter { } predicate; without the plugin there is no such mutant.
           grep -q 'filter{} predicate' "$report"
+      - name: Check the opt-in FKTMESSAGE filter
+        run: |
+          ./gradlew -p e2e pitest -Pmutators=DEFAULTS,KOTLIN -Pfeatures=+FKTMESSAGE -PreportName=reports/message --stacktrace
+          count() { python3 -c 'import sys,re; x=open(sys.argv[1]).read(); print(len([m for m in re.findall(r"<mutation .*?</mutation>", x, re.S) if "<mutatedMethod>failure</mutatedMethod>" in m and "KotlinElvisNeverDefault" in m]))' "$1"; }
+          [ "$(count e2e/build/reports/pitest/mutations.xml)" -eq 1 ]
+          [ "$(count e2e/build/reports/message/mutations.xml)" -eq 0 ]
       - name: Upload the PIT report
         if: always()
         uses: actions/upload-artifact@v7

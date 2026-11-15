@@ -45,11 +45,12 @@ abstract class KotlinFilterFactory(
     private val description: String,
     private val create: (InterceptorParameters) -> MutationInterceptor,
     private val parameters: List<FeatureParameter> = emptyList(),
+    private val onByDefault: Boolean = true,
 ) : MutationInterceptorFactory {
     override fun createInterceptor(params: InterceptorParameters): MutationInterceptor = create(params)
 
     override fun provides(): Feature =
-        parameters.fold(Feature.named(featureName).withOnByDefault(true).withDescription(description)) { f, p ->
+        parameters.fold(Feature.named(featureName).withOnByDefault(onByDefault).withDescription(description)) { f, p ->
             f.withParameter(p)
         }
 

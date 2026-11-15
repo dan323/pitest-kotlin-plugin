@@ -17,7 +17,7 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     // The plugin under test, as published by the parent project; kotlin-stdlib comes with it.
-    pitest("io.github.dan323:pitest-kotlin-plugin:0.1.0")
+    pitest("io.github.dan323:pitest-kotlin-plugin:0.2.0-SNAPSHOT")
 }
 
 kotlin { compilerOptions { jvmTarget = JvmTarget.JVM_17 } }
@@ -34,6 +34,7 @@ pitest {
     timestampedReports = false
     threads = 2
     // -Pfeatures="-FKTINLINE,-FKTINTRINSICS,-FKTCORO" turns the plugin's filters off for the baseline run.
+    (findProperty("mutators") as String?)?.let { mutators = it.split(",") }
     (findProperty("features") as String?)?.let { features = it.split(",") }
     reportDir = layout.buildDirectory.dir(findProperty("reportName") as String? ?: "reports/pitest")
 }

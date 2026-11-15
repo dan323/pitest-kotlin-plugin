@@ -11,6 +11,8 @@ class Sample {
 
     fun describe(): String = label.uppercase()
 
+    fun failure(e: Exception): String = e.message ?: "unknown error"
+
     suspend fun fetch(x: Int): Int = suspendCoroutine { it.resumeWith(Result.success(x)) }
 
     suspend fun compute(x: Int): Int {
