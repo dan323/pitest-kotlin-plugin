@@ -7,13 +7,12 @@ Rules for every item: filters must not hide logic a test can kill (validate by t
 remove: no `KILLED` mutant may be dropped by a default-on filter); bytecode only, no test results; the only runtime
 dependency stays `kotlin-stdlib`; new filters are additive and keep existing feature names.
 
-## 0.2.0 (merged, release pending)
+## 0.2.0 (released)
 
 `FKTNONNULL` (default on), `FKTMESSAGE` (opt-in), the `e2e` fix that makes `-Pmutators` reach PIT, and the documentation
-of the `DEFAULTS` mutator-set trap. Release steps: bump the version in `build.gradle.kts`, the README `pitest(...)` line and
-`e2e/build.gradle.kts`, tag `v0.2.0`, publish the GitHub release (see `CLAUDE.md`, "Publishing").
+of the `DEFAULTS` mutator-set trap.
 
-## 0.3.0: test across Kotlin versions
+## 0.3.0: test across Kotlin versions (released)
 
 ### Kotlin version matrix in CI
 

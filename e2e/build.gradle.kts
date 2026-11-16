@@ -17,7 +17,7 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     // The plugin under test, as published by the parent project; kotlin-stdlib comes with it.
-    pitest("io.github.dan323:pitest-kotlin-plugin:0.3.0-SNAPSHOT")
+    pitest("io.github.dan323:pitest-kotlin-plugin:0.3.0")
 }
 
 kotlin { compilerOptions { jvmTarget = JvmTarget.JVM_17 } }
