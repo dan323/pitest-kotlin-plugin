@@ -15,12 +15,18 @@ concurrency:
 
 jobs:
   test:
-    name: Unit tests (JDK ${{ matrix.java }})
+    name: Unit tests (JDK ${{ matrix.java }}, Kotlin ${{ matrix.kotlin }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         java: [17, 21]
+        kotlin: ['2.4.21']
+        include:
+          # The filters read the bytecode kotlinc emits, which changes between versions: compile the fixtures with each.
+          - { java: 21, kotlin: '2.1.20' }
+          - { java: 21, kotlin: '2.2.20' }
+          - { java: 21, kotlin: '2.3.20' }
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -29,17 +35,24 @@ jobs:
           java-version: ${{ matrix.java }}
       - uses: gradle/actions/setup-gradle@v6
       - name: Test
-        run: ./gradlew test --stacktrace
+        run: ./gradlew test -PkotlinVersion=${{ matrix.kotlin }} --stacktrace
       - name: Upload test reports on failure
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: test-reports-jdk${{ matrix.java }}
+          name: test-reports-jdk${{ matrix.java }}-kotlin${{ matrix.kotlin }}
           path: build/reports/tests/
 
   e2e:
-    name: PIT end-to-end
+    name: PIT end-to-end (Kotlin ${{ matrix.kotlin }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        kotlin: ['2.1.20', '2.2.20', '2.3.20', '2.4.21']
+    env:
+      # The sample project is compiled with this Kotlin version; the plugin itself is published with the default.
+      KOTLIN: -PkotlinVersion=${{ matrix.kotlin }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -50,7 +63,7 @@ jobs:
       - name: Publish the plugin to the local Maven repository
         run: ./gradlew publishToMavenLocal --stacktrace
       - name: Run PIT with the published plugin on the sample project
-        run: ./gradlew -p e2e pitest -Pmutators=DEFAULTS,KOTLIN --stacktrace
+        run: ./gradlew -p e2e pitest $KOTLIN -Pmutators=DEFAULTS,KOTLIN --stacktrace
       - name: Check that the plugin was active in the PIT run
         run: |
           report=e2e/build/reports/pitest/mutations.xml
@@ -59,8 +72,8 @@ jobs:
           grep -q 'filter{} predicate' "$report"
       - name: Check the FKTNONNULL and opt-in FKTMESSAGE filters
         run: |
-          ./gradlew -p e2e pitest -Pmutators=DEFAULTS,KOTLIN -Pfeatures=-FKTNONNULL -PreportName=reports/nonnull-off --stacktrace
-          ./gradlew -p e2e pitest -Pmutators=DEFAULTS,KOTLIN -Pfeatures=+FKTMESSAGE -PreportName=reports/message --stacktrace
+          ./gradlew -p e2e pitest $KOTLIN -Pmutators=DEFAULTS,KOTLIN -Pfeatures=-FKTNONNULL -PreportName=reports/nonnull-off --stacktrace
+          ./gradlew -p e2e pitest $KOTLIN -Pmutators=DEFAULTS,KOTLIN -Pfeatures=+FKTMESSAGE -PreportName=reports/message --stacktrace
           count() { python3 -c 'import sys,re; x=open(sys.argv[1]).read(); print(len([m for m in re.findall(r"<mutation .*?</mutation>", x, re.S) if "<mutatedMethod>"+sys.argv[2]+"</mutatedMethod>" in m and "KotlinElvisNeverDefault" in m]))' "$1" "$2"; }
           # stamp: the elvis after `?.let { "t$it" }` sees a string concatenation, never null.
           [ "$(count e2e/build/reports/nonnull-off/mutations.xml stamp)" -eq 1 ]
@@ -72,5 +85,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: pit-report
+          name: pit-report-kotlin${{ matrix.kotlin }}
           path: e2e/build/reports/pitest/

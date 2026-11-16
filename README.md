@@ -101,7 +101,7 @@ More detail on every filter and mutator, and how to read survivors: [docs/user-g
   line, so `FKTINLINE` cannot tell their loop code from yours.
 - Some mutants are equivalent and bytecode cannot tell: `first` <-> `last` on one-element lists, and
   `x?.let { setter(it) }` where the setter accepts null.
-- Bytecode patterns were checked against Kotlin 2.1.20 and 2.4.21. Other versions may emit different shapes.
+- Bytecode patterns depend on the Kotlin compiler. CI compiles the test fixtures and the `e2e` sample with Kotlin 2.1.20, 2.2.20, 2.3.20 and 2.4.21 and runs every check on each. Other versions may emit different shapes.
 
 ## Build
 

@@ -74,4 +74,4 @@ Classify a survivor by asking which input kills it before you reach for a filter
   code from yours.
 - Some mutants are equivalent and bytecode cannot tell: `first`<->`last` on a one-element list, `x?.let { setter(it) }`
   where the setter accepts null, and the link after a generic `List<String>.get` in a safe-call chain.
-- Bytecode patterns were checked against Kotlin 2.1.20 and 2.4.21. Other versions may emit different shapes.
+- Bytecode patterns depend on the Kotlin compiler. CI compiles the test fixtures and the `e2e` sample with Kotlin 2.1.20, 2.2.20, 2.3.20 and 2.4.21 and runs every check on each. Other versions may emit different shapes.

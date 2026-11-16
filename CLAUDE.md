@@ -11,6 +11,7 @@ A free PIT (pitest) plugin that improves mutation testing of Kotlin. PIT works o
 ```
 ./gradlew test                                   # all tests
 ./gradlew test --tests '*FiltersTest.inlined*'   # one test (backtick names: match a substring)
+./gradlew test -PkotlinVersion=2.1.20            # fixtures compiled with another Kotlin (CI matrix: 2.1.20, 2.2.20, 2.3.20, 2.4.21)
 ./gradlew publishToMavenLocal                    # needed before the e2e build
 ./gradlew -p e2e pitest -Pmutators=DEFAULTS,KOTLIN [-Pfeatures=-FKTNONNULL,+FKTMESSAGE] [-PreportName=reports/x]
 ```
@@ -35,7 +36,7 @@ A free PIT (pitest) plugin that improves mutation testing of Kotlin. PIT works o
 - **A mutator must register in the coverage block tests reach.** PIT runs only tests that covered the block current at registration; elvis mutants first registered at the default branch and showed false survivors. They register at the jump; `ElvisMutatorsTest` asserts the block. Lookahead means buffering events.
 - **Test mutators by executing them** (`MutantSet` loads mutated bytes in a child-first loader, so the verifier runs). Test filters on fixtures in `src/test/kotlin/fixtures/Fixtures.kt` via `FilterTestSupport`, asserting what is dropped *and* what is kept.
 - `MutationDetails.getInstructionIndex()` indexes the full ASM list including labels/frames; use `MethodTree.instructions()`. A `nop` (inline `let`) can sit between a call and its `dup`.
-- Bytecode shapes depend on the Kotlin version: verify new patterns with `javap -p -c` on the compiled fixtures.
+- Bytecode shapes depend on the Kotlin version: verify new patterns with `javap -p -c` on the compiled fixtures, and run the suite with `-PkotlinVersion=` across the CI matrix. Pass `-PkotlinVersion` to the `e2e` build too (`-p e2e`). The publish plugin needs Kotlin 2.2+, so `build.gradle.kts` skips it on older versions.
 - Interceptor options: `InterceptorParameters.getList` returns **null** when other options are set but that key is absent; `getString` only through `Optional`. Rewriting `MutationDetails` in an interceptor is fine (id, file, description, line, blocks).
 - Kotlin 2.x: non-suspend lambdas are `invokedynamic` + `name$lambda$N` on the enclosing class; suspend lambdas get their own class. Stdlib facade call sites name `kotlin/collections/CollectionsKt`, not `___CollectionsKt` (stdlib swap table; `StdlibSwapMutatorTest` checks every entry by reflection).
 - Inlined predicate lambdas are found through the `$i$a$-<fn>-...` local variable; the jump after it is relabelled by `FKTINLINE`. This needs the whole `ClassTree`, so it cannot be a mutator.
