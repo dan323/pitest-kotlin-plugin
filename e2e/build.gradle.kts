@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    kotlin("jvm") version "2.4.21"
+    kotlin("jvm")
     id("info.solidsoft.pitest") version "1.19.0"
 }
 

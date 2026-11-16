@@ -1,14 +1,20 @@
+import com.vanniktech.maven.publish.MavenPublishBaseExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    kotlin("jvm") version "2.4.21"
-    id("com.vanniktech.maven.publish") version "0.37.0"
+    kotlin("jvm")
+    id("com.vanniktech.maven.publish") version "0.37.0" apply false
 }
 
 group = "io.github.dan323"
 version = "0.3.0-SNAPSHOT"
 
 val pitestVersion = "1.30.2"
+
+// The publishing plugin needs Kotlin 2.2+. Older -PkotlinVersion builds (the CI matrix) only compile and test.
+val kotlinVersion = providers.gradleProperty("kotlinVersion").getOrElse("2.4.21")
+val canPublish = kotlinVersion.split('.').let { it[0].toInt() > 2 || (it[0].toInt() == 2 && it[1].toInt() >= 2) }
+if (canPublish) apply(plugin = "com.vanniktech.maven.publish")
 
 repositories {
     mavenCentral()
@@ -42,7 +48,7 @@ tasks.test {
     useJUnitPlatform()
 }
 
-mavenPublishing {
+if (canPublish) extensions.configure<MavenPublishBaseExtension> {
     // Central Portal. Credentials come from ORG_GRADLE_PROJECT_mavenCentralUsername / ...Password, never from this file.
     publishToMavenCentral()
 

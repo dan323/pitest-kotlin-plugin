@@ -27,8 +27,10 @@ Gradle property (`-PkotlinVersion=`) with the current one as the default. Tests 
 `$lambda$N` names) must assert the behaviour instead, or be explicitly skipped for versions where the shape differs, with
 the reason in the test.
 
-**Done when** CI runs the matrix, every failure is either fixed in the filter or documented as unsupported in the README
-("checked against Kotlin ..."), and the README lists the tested versions.
+**Result (issue #6).** The matrix runs the unit suite and the `e2e` sample on Kotlin 2.1.20, 2.2.20, 2.3.20 and 2.4.21 (class
+metadata confirms the fixtures are compiled by each). All 60 tests and every `e2e` assertion pass on all four with no
+filter change, so no shape-specific skips were needed. The publishing plugin needs Kotlin 2.2+, so on older versions it is
+not applied (`-PkotlinVersion` builds only compile and test; the published jar always uses the default).
 
 ## 0.4.0: more stdlib swaps (`KOTLIN_STDLIB_SWAP`)
 
