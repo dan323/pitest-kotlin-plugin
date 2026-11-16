@@ -13,34 +13,9 @@ dependency stays `kotlin-stdlib`; new filters are additive and keep existing fea
 of the `DEFAULTS` mutator-set trap. Release steps: bump the version in `build.gradle.kts`, the README `pitest(...)` line and
 `e2e/build.gradle.kts`, tag `v0.2.0`, publish the GitHub release (see `CLAUDE.md`, "Publishing").
 
-## 0.3.0: keep precondition mutants, and test across Kotlin versions
+## 0.3.0: test across Kotlin versions
 
-### A. Keep `require` / `check` / `requireNotNull` mutants (`FKTINLINE`)
-
-**Problem.** `require(x > 0)`, `check(ready)` and `requireNotNull(x)` are inline stdlib functions. The compiler expands them
-to `if (!cond) throw IllegalArgumentException(...)` and maps the jump to `Preconditions.kt` in the SMAP, so `FKTINLINE`
-drops its mutants as stdlib noise. But "what if the precondition never fired / always fired" is the same question as the
-inlined predicate in `filter { }`, which `FKTINLINE` already keeps and relabels (`filter{} predicate: ...`). A test that
-never passes an invalid argument is a real gap that we currently hide.
-
-**Design.** Reuse the predicate relocation in `KotlinInlinedCodeFilter`. For an inlined range whose origin function is
-`require`, `check`, `requireNotNull` or `checkNotNull` (the compiler writes `$i$f$require` / `$i$a$-require-...` local
-variables), find the jump that consumes the condition, keep its mutants and report them on the call's own line as
-`require{} precondition: ...`, keeping id and block. The compiler-generated message construction and the `throw` stay dropped (message text is not logic), but mutants in user-authored code inside the `lazyMessage` lambda stay eligible, as for any user lambda.
-`error(...)` and `TODO()` are not preconditions and stay as they are.
-
-**Decide first (measurement, before any code).** On http-client and one more project, count the mutants `FKTINLINE` drops
-at these sites and their status when the filter is off. If most are `KILLED`, the filter is hiding signal and the change
-is worth shipping on by default; if most `SURVIVE` because tests never trigger the failure, ship it on as well and say so
-in the notes (the survivors are gaps); if there are almost none, drop the item.
-
-**Tests.** A fixture with `require`, `check`, `requireNotNull` and a lambda message; assert the jump mutant is kept and
-relabelled, that the generated message construction and the `throw` are still dropped while a user branch inside the message lambda (`require(x) { if (y) "a" else "b" }`) keeps its mutants, and that a user's own inline
-`require`-like function is untouched (stdlib origins only, as for the other predicates). Add the sample to `e2e/`.
-
-**Done when** the README table and `docs/user-guide.md` describe it and the measurement is recorded in the PR.
-
-### B. Kotlin version matrix in CI
+### Kotlin version matrix in CI
 
 **Problem.** Every filter depends on the bytecode shape `kotlinc` emits, and shapes change between versions (the
 `lateinit` throw moved to the jump target). We test on 2.4.21; users run 2.1 to 2.4 (http-client is on 2.2.20), so a
@@ -75,6 +50,19 @@ empty collection) must be listed in the user guide.
 
 **Done when** the table, README and user guide list the new pairs and the PR records mutants/killed/survived per pair on
 the corpora.
+
+## Measured and dropped
+
+- **Keep `require` / `check` / `requireNotNull` mutants in `FKTINLINE`** (issue #5). The premise was that `FKTINLINE` drops
+  the precondition jump as stdlib code. It does not: these functions are `@InlineOnly`, so the compiler gives their body the
+  *call site's* line and the SMAP shows nothing to drop. Measured with `FKTINLINE` on vs off:
+  - http-client (Kotlin 2.2.20, 1702 vs 1812 mutants; `FKTINLINE` drops 146, none in the classes with `require`): at
+    `Model.kt:70-71` and `RequestTimeouts.kt:30` every conditional, boundary and `EQUAL_ELSE`/`ORDER_ELSE` mutant is
+    kept, 9 of 11 of them killed.
+  - A fixture on Kotlin 2.4.21 with `require` (with and without message), `check`, `requireNotNull` and `checkNotNull`:
+    nothing dropped; the condition mutants and the mutants of a user branch inside the message lambda are all kept.
+  Nothing to fix. (The relabelling of inlined `filter { }` predicates is needed only because those functions are not
+  `@InlineOnly`.)
 
 ## Considered, not scheduled
 
