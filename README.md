@@ -90,7 +90,7 @@ Measured with PIT 1.30.2 on two open-source projects (all filters on, `DEFAULTS`
 
 Numbers depend on the project and on test flakiness (about 1% of mutants flipped between identical runs).
 
-More detail on every filter and mutator, and how to read survivors: [docs/user-guide.md](docs/user-guide.md).
+More detail on every filter and mutator, and how to read survivors: [docs/user-guide.md](docs/user-guide.md). What is planned next: [docs/roadmap.md](docs/roadmap.md).
 
 ## Limitations
 
