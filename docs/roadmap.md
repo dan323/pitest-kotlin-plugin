@@ -26,7 +26,7 @@ never passes an invalid argument is a real gap that we currently hide.
 **Design.** Reuse the predicate relocation in `KotlinInlinedCodeFilter`. For an inlined range whose origin function is
 `require`, `check`, `requireNotNull` or `checkNotNull` (the compiler writes `$i$f$require` / `$i$a$-require-...` local
 variables), find the jump that consumes the condition, keep its mutants and report them on the call's own line as
-`require{} precondition: ...`, keeping id and block. The `lazyMessage` lambda stays dropped (message text is not logic).
+`require{} precondition: ...`, keeping id and block. The compiler-generated message construction and the `throw` stay dropped (message text is not logic), but mutants in user-authored code inside the `lazyMessage` lambda stay eligible, as for any user lambda.
 `error(...)` and `TODO()` are not preconditions and stay as they are.
 
 **Decide first (measurement, before any code).** On http-client and one more project, count the mutants `FKTINLINE` drops
@@ -35,7 +35,7 @@ is worth shipping on by default; if most `SURVIVE` because tests never trigger t
 in the notes (the survivors are gaps); if there are almost none, drop the item.
 
 **Tests.** A fixture with `require`, `check`, `requireNotNull` and a lambda message; assert the jump mutant is kept and
-relabelled, that the message lambda and the `throw` construction are still dropped, and that a user's own inline
+relabelled, that the generated message construction and the `throw` are still dropped while a user branch inside the message lambda (`require(x) { if (y) "a" else "b" }`) keeps its mutants, and that a user's own inline
 `require`-like function is untouched (stdlib origins only, as for the other predicates). Add the sample to `e2e/`.
 
 **Done when** the README table and `docs/user-guide.md` describe it and the measurement is recorded in the PR.
