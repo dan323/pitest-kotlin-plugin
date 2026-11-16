@@ -58,7 +58,7 @@ the corpora.
   *call site's* line and the SMAP shows nothing to drop. Measured with `FKTINLINE` on vs off:
   - http-client (Kotlin 2.2.20, 1702 vs 1812 mutants; `FKTINLINE` drops 146, none in the classes with `require`): at
     `Model.kt:70-71` and `RequestTimeouts.kt:30` every conditional, boundary and `EQUAL_ELSE`/`ORDER_ELSE` mutant is
-    kept, 9 of 11 of them killed.
+    kept (10 mutants, 8 of them killed, 2 survive).
   - A fixture on Kotlin 2.4.21 with `require` (with and without message), `check`, `requireNotNull` and `checkNotNull`:
     nothing dropped; the condition mutants and the mutants of a user branch inside the message lambda are all kept.
   Nothing to fix. (The relabelling of inlined `filter { }` predicates is needed only because those functions are not
