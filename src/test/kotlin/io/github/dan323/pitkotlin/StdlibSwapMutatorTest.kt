@@ -34,6 +34,11 @@ class StdlibSwapMutatorTest {
         Case("strFirst", "abc", 'a', 'c'),
         Case("seqTake", sequenceOf(1, 2, 3), listOf(1, 2), listOf(3)),
         Case("trimS", "  a  ", "a  ", "  a"),
+        Case("removePrefix", "abcab", "cab", "abc"),
+        Case("trimChars", "xaxx", "axx", "xa"),
+        Case("indexOfChar", "abcb", 1, 3),
+        Case("beforeOrElse", "a-b", "a", "b"),
+        Case("startsWithChar", "abc", true, false),
     )
 
     private class Case(val method: String, val arg: Any, val original: Any?, val mutated: Any?)
