@@ -59,8 +59,8 @@ with names that say which side no test exercises. A survivor on `*_NEVER_DEFAULT
 applies to real calls: inline functions (`filter`, `any`, `map`, `isNotBlank`...) leave none.
 
 Some swaps are equivalent for a whole class of inputs, not for the code: `indexOf` <-> `lastIndexOf` when the searched
-character occurs once, `first` <-> `last` on a one-element list, `removePrefix` <-> `removeSuffix` when only one of the two
-can match. A survivor there means no test uses an input where they differ (a header value that contains a second `:`).
+character occurs once, `first` <-> `last` on a one-element list, `removePrefix` <-> `removeSuffix` when neither end matches
+(both return the string unchanged; if only one end matches they differ). A survivor there means no test uses an input where they differ (a header value that contains a second `:`).
 
 ## Reading survivors
 
