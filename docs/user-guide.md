@@ -51,12 +51,16 @@ parameter null checks), so this plugin does not repeat that.
 | `KOTLIN_ELVIS_NEVER_DEFAULT` | `a ?: b` yields `a`, even when null | `REMOVE_CONDITIONALS_EQUAL_ELSE` (`DEFAULTS`) |
 | `KOTLIN_ELVIS_ALWAYS_DEFAULT` | `a ?: b` always yields `b` | `REMOVE_CONDITIONALS_EQUAL_IF` (`STRONGER`) |
 | `KOTLIN_SAFECALL_NEVER_NULL` | `a?.f()` calls `f` on a null `a` | `REMOVE_CONDITIONALS_EQUAL_IF` (`STRONGER`) |
-| `KOTLIN_STDLIB_SWAP` | `first`<->`last`, `take`<->`drop`, `startsWith`<->`endsWith`, `coerceAtLeast`<->`coerceAtMost`, `Math.max`<->`min`... | none |
+| `KOTLIN_STDLIB_SWAP` | `first`<->`last`, `take`<->`drop`, `startsWith`<->`endsWith`, `coerceAtLeast`<->`coerceAtMost`, `removePrefix`<->`removeSuffix`, `indexOf`<->`lastIndexOf`, `substringBefore`<->`substringAfter`, `trimStart`<->`trimEnd`, `Math.max`<->`min`... | none |
 
 `DEFAULTS` lacks the always-default side of an elvis and the never-null side of a safe call; the Kotlin mutators add them
 with names that say which side no test exercises. A survivor on `*_NEVER_DEFAULT` means no test supplies a null; on
 `*_ALWAYS_DEFAULT`, no test supplies a non-null. The stdlib swap needs both operands to share a descriptor and only
-applies to real calls: inline functions (`filter`, `any`, `map`...) leave none.
+applies to real calls: inline functions (`filter`, `any`, `map`, `isNotBlank`...) leave none.
+
+Some swaps are equivalent for a whole class of inputs, not for the code: `indexOf` <-> `lastIndexOf` when the searched
+character occurs once, `first` <-> `last` on a one-element list, `removePrefix` <-> `removeSuffix` when neither end matches
+(both return the string unchanged; if only one end matches they differ). A survivor there means no test uses an input where they differ (a header value that contains a second `:`).
 
 ## Reading survivors
 

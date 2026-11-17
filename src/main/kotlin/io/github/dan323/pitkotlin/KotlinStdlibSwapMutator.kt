@@ -71,6 +71,15 @@ internal object StdlibSwaps {
             swap(STRINGS, "substringBefore\$default", "substringAfter\$default", d)
             swap(STRINGS, "substringBeforeLast\$default", "substringAfterLast\$default", d)
         }
+        for (target in listOf("Ljava/lang/String;", "C")) {
+            swap(STRINGS, "substringBefore", "substringAfter", "(Ljava/lang/String;${target}Ljava/lang/String;)Ljava/lang/String;")
+            swap(STRINGS, "substringBeforeLast", "substringAfterLast", "(Ljava/lang/String;${target}Ljava/lang/String;)Ljava/lang/String;")
+        }
+        swap(STRINGS, "removePrefix", "removeSuffix", "(Ljava/lang/String;Ljava/lang/CharSequence;)Ljava/lang/String;", "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Ljava/lang/CharSequence;")
+        swap(STRINGS, "trimStart", "trimEnd", "(Ljava/lang/String;[C)Ljava/lang/String;", "(Ljava/lang/CharSequence;[C)Ljava/lang/CharSequence;")
+        swap(STRINGS, "startsWith\$default", "endsWith\$default", "(Ljava/lang/CharSequence;CZILjava/lang/Object;)Z")
+        swap(STRINGS, "startsWith", "endsWith", "(Ljava/lang/CharSequence;CZ)Z", "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;Z)Z")
+        swap(STRINGS, "indexOf\$default", "lastIndexOf\$default", "(Ljava/lang/CharSequence;CIZILjava/lang/Object;)I")
         swap(STRINGS, "indexOf\$default", "lastIndexOf\$default", "(Ljava/lang/CharSequence;Ljava/lang/String;IZILjava/lang/Object;)I")
 
         for (d in listOf("(II)I", "(JJ)J", "(FF)F", "(DD)D")) swap(MATH, "max", "min", d)

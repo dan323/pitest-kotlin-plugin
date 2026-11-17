@@ -135,6 +135,11 @@ class Swaps {
     fun maxInt(a: Int, b: Int): Int = maxOf(a, b)
     fun minInt(a: Int, b: Int): Int = kotlin.math.min(a, b)
     fun trimS(s: String): String = s.trimStart()
+    fun removePrefix(s: String): String = s.removePrefix("ab")
+    fun trimChars(s: String): String = s.trimStart('x')
+    fun indexOfChar(s: String): Int = s.indexOf('b')
+    fun beforeOrElse(s: String): String = s.substringBefore("-", "none")
+    fun startsWithChar(s: String): Boolean = s.startsWith('a')
 }
 
 class Predicates {

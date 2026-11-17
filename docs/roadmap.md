@@ -31,26 +31,29 @@ metadata confirms the fixtures are compiled by each). All 60 tests and every `e2
 filter change, so no shape-specific skips were needed. The publishing plugin needs Kotlin 2.2+, so on older versions it is
 not applied (`-PkotlinVersion` builds only compile and test; the published jar always uses the default).
 
-## 0.4.0: more stdlib swaps (`KOTLIN_STDLIB_SWAP`)
+## 0.4.0: more stdlib swaps (`KOTLIN_STDLIB_SWAP`, issue #7 done)
 
 **Why.** On http-client the swap mutator generated 84 mutants and 24 survived, all of them test gaps (an unnamed request, an
 indented line). That yield is far better than on the first corpora (mockito-kotlin 3, kotlin-result 0), so more pairs are
 worth adding, driven by data rather than guesses.
 
-**Candidates** (each must have a partner with the exact same descriptor, so the mutated class verifies): `isEmpty` <->
-`isNotEmpty`, `isBlank` <-> `isNotBlank`, `plus` <-> `minus` on collections, `sorted` <-> `sortedDescending` (already in),
-`reversed` (no-op swap, skipped), `sum`-style `minOf` <-> `maxOf`, `removePrefix` <-> `removeSuffix`, `indexOf` <->
-`lastIndexOf` variants not yet covered, `filter`-family calls that are not inline (`filterIsInstance` is inline: skip).
+**Result (issue #7).** The calls in http-client's compiled classes were counted first; only pairs that occur and have the same
+descriptor on both sides were added: `removePrefix` <-> `removeSuffix`, `trimStart` <-> `trimEnd` with a character set,
+`indexOf` <-> `lastIndexOf` with a `Char`, `substringBefore` <-> `substringAfter` (and the `Last` variants) called with all
+arguments, `startsWith` <-> `endsWith` with a `Char` or `CharSequence`. Candidates dropped because the call does not exist or
+cannot be swapped: `isNotBlank`, `isNotEmpty`, `isEmpty` (inline, no call is left), `plus` <-> `minus` (different
+descriptors: `plus(Collection, T)` vs `minus(Iterable, T)`), `startsWith` with an offset (no `endsWith` equivalent).
+The table is checked against the stdlib by `StdlibSwapMutatorTest`.
 
-**Process.** (1) Run the corpus with a throwaway extra table and count calls per candidate in real code; add only pairs that
-occur. (2) For each pair, compile a fixture and read the real call site with `javap -c` (facade owner, `$default` variants).
-(3) `StdlibSwapMutatorTest` already checks every table entry by reflection against the stdlib on the classpath; the new
-entries must pass it. (4) Check for equivalents: a pair that is equivalent for a whole class of inputs (like `first` /
-`last` under a `size == 1` guard) is fine, but a pair that is equivalent in practice (for example `plus` / `minus` of an
-empty collection) must be listed in the user guide.
+On http-client the new pairs add 29 mutants (114 -> 143): 18 killed, 11 survive, all test gaps (`indexOf(':')` on a value
+with a second colon, `rest.removeSuffix("()")`, a trailing `.` in a file name):
 
-**Done when** the table, README and user guide list the new pairs and the PR records mutants/killed/survived per pair on
-the corpora.
+| Pair | Added | Killed | Survived |
+|---|---|---|---|
+| `indexOf` <-> `lastIndexOf` (char) | 9 | 3 | 6 |
+| `removePrefix` <-> `removeSuffix` | 12 | 9 | 3 |
+| `trimStart` <-> `trimEnd` (chars) | 5 | 3 | 2 |
+| `substringAfter` <-> `substringBefore` (all arguments) | 3 | 3 | 0 |
 
 ## Measured and dropped
 
