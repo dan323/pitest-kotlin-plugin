@@ -65,7 +65,7 @@ class KotlinSafeCallNeverNullMutator : MethodMutatorFactory {
 /** Makes `KOTLIN` select all Kotlin mutators, e.g. `mutators = ["DEFAULTS", "KOTLIN"]`. */
 class KotlinMutatorGroup : MutatorGroup {
     override fun register(groups: MutableMap<String, MutableList<MethodMutatorFactory>>) {
-        groups["KOTLIN"] = gather(groups, "KOTLIN_ELVIS_ALWAYS_DEFAULT", "KOTLIN_ELVIS_NEVER_DEFAULT", "KOTLIN_SAFECALL_NEVER_NULL", "KOTLIN_STDLIB_SWAP")
+        groups["KOTLIN"] = gather(groups, "KOTLIN_ELVIS_ALWAYS_DEFAULT", "KOTLIN_ELVIS_NEVER_DEFAULT", "KOTLIN_SAFECALL_NEVER_NULL", "KOTLIN_STDLIB_SWAP", "KOTLIN_REMOVE_DISTINCT", "KOTLIN_REMOVE_SORTED")
     }
 }
 

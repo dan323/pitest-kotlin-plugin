@@ -2,3 +2,5 @@ io.github.dan323.pitkotlin.KotlinElvisAlwaysDefaultMutator
 io.github.dan323.pitkotlin.KotlinElvisNeverDefaultMutator
 io.github.dan323.pitkotlin.KotlinSafeCallNeverNullMutator
 io.github.dan323.pitkotlin.KotlinStdlibSwapMutator
+io.github.dan323.pitkotlin.KotlinRemoveDistinctMutator
+io.github.dan323.pitkotlin.KotlinRemoveSortedMutator

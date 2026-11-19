@@ -22,7 +22,7 @@ A free PIT (pitest) plugin that improves mutation testing of Kotlin. PIT works o
 
 - `KotlinFilterSupport.kt`: `KotlinMutationFilter` (subclasses implement `shouldDrop(MutationDetails)`) and `KotlinFilterFactory` (supplies the PIT `Feature`, `onByDefault`). One filter + factory per file; each factory must be listed in `META-INF/services/org.pitest.mutationtest.build.MutationInterceptorFactory` (`ServiceRegistrationTest` checks the names).
 - Null-site filters share `NullSites.kt` (which mutants are the "never null" side of a `dup; ifnull/ifnonnull`); `KotlinNonNull.kt` proves a value non-null from bytecode.
-- Mutators (`KotlinElvisMutators.kt`, `KotlinStdlibSwapMutator.kt`) are plain classes with a no-arg constructor, listed in `META-INF/services` as `MethodMutatorFactory` / `MutatorGroup`; PIT's `Mutator` loads them, no custom engine.
+- Mutators (`KotlinElvisMutators.kt`, `KotlinStdlibSwapMutator.kt`, `KotlinRemoveMutators.kt`) are plain classes with a no-arg constructor, listed in `META-INF/services` as `MethodMutatorFactory` / `MutatorGroup`; PIT's `Mutator` loads them, no custom engine.
 - Mutators use PIT's **shaded ASM** (`org.pitest.reloc.asm`); interceptors use `org.objectweb.asm` through `ClassTree`.
 - PIT's `feature.name()` is lower-case, users toggle `+FKTINLINE` / `-FKTINLINE`. Heuristic filters must be `onByDefault = false`.
 - PIT is `compileOnly`; `kotlin-stdlib` is the only runtime dependency and must be on PIT's plugin classpath (`e2e` adds it).

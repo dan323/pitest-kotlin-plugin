@@ -31,7 +31,7 @@ metadata confirms the fixtures are compiled by each). All 60 tests and every `e2
 filter change, so no shape-specific skips were needed. The publishing plugin needs Kotlin 2.2+, so on older versions it is
 not applied (`-PkotlinVersion` builds only compile and test; the published jar always uses the default).
 
-## 0.4.0: more stdlib swaps (`KOTLIN_STDLIB_SWAP`, issue #7 done) and `FKTWHEN` (issue #16 done)
+## 0.4.0: more stdlib swaps (`KOTLIN_STDLIB_SWAP`, issue #7 done) `FKTWHEN` (issue #16 done) and `KOTLIN_REMOVE_DISTINCT` / `KOTLIN_REMOVE_SORTED` (issue #17 done)
 
 **Why.** On http-client the swap mutator generated 84 mutants and 24 survived, all of them test gaps (an unnamed request, an
 indented line). That yield is far better than on the first corpora (mockito-kotlin 3, kotlin-result 0), so more pairs are
@@ -54,6 +54,20 @@ with a second colon, `rest.removeSuffix("()")`, a trailing `.` in a file name):
 | `removePrefix` <-> `removeSuffix` | 12 | 9 | 3 |
 | `trimStart` <-> `trimEnd` (chars) | 5 | 3 | 2 |
 | `substringAfter` <-> `substringBefore` (all arguments) | 3 | 3 | 0 |
+
+### `KOTLIN_REMOVE_DISTINCT` / `KOTLIN_REMOVE_SORTED` (issue #17)
+
+**Result.** `distinct`, `sorted`, `sortedDescending` and `sortedWith` are non-inline, so a call is left to mutate (`sortedBy` and
+`distinctBy` are inline: not mutated). An `Iterable -> List` call is replaced by `toList()` on the receiver (`sortedWith` pops the
+comparator first), which keeps the descriptor and verifies; a `Sequence -> Sequence` call is simply dropped. The tests execute
+every mutant. Call sites in the local corpora are few: only http-client has any (2 `distinct`, about 8 `sortedWith`, 1 `sorted` in
+compiled code), so the yield is small and the mutators are cheap, not a big win.
+
+On http-client (`FKTINLINE` on) the two mutators generate 5 mutants: 2 killed, 2 survive, 1 `NO_COVERAGE`.
+`VariableAnalysis.kt:133` (`environment.sorted().forEach { result.putIfAbsent(...) }`) is equivalent in practice: only the
+insertion order changes. `FolderListing.kt:45` (`files.sortedWith(byName)`) is a test gap: no test checks the order of files.
+`SettingsStore.kt:73` (`distinct()` in `bounded`) is untested code. Several `sortedWith` mutants in the stdlib's inlined `sortedBy` are
+dropped by `FKTINLINE`, which is correct.
 
 ### `FKTWHEN` (issue #16)
 

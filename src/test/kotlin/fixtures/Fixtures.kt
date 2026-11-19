@@ -275,3 +275,16 @@ class Whens {
         else -> 0
     }
 }
+
+class Removals {
+    fun distinct(l: List<Int>): List<Int> = l.distinct()
+    fun sorted(l: List<Int>): List<Int> = l.sorted()
+    fun sortedDescending(l: List<Int>): List<Int> = l.sortedDescending()
+    fun sortedWith(l: List<Int>): List<Int> = l.sortedWith(Comparator { a, b -> b - a })
+    fun seqDistinct(s: Sequence<Int>): List<Int> = s.distinct().toList()
+    fun seqSorted(s: Sequence<Int>): List<Int> = s.sorted().toList()
+    fun seqSortedDescending(s: Sequence<Int>): List<Int> = s.sortedDescending().toList()
+    fun seqSortedWith(s: Sequence<Int>): List<Int> = s.sortedWith(Comparator { a, b -> b - a }).toList()
+    fun distinctBy(l: List<Int>): List<Int> = l.distinctBy { it % 2 }
+    fun noCalls(l: List<Int>): List<Int> = l.toList()
+}

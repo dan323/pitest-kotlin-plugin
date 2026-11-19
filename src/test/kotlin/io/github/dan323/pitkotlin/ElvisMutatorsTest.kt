@@ -104,7 +104,7 @@ class ElvisMutatorsTest {
         assertTrue("KOTLIN_ELVIS_ALWAYS_DEFAULT" in ids && "KOTLIN_ELVIS_NEVER_DEFAULT" in ids, ids.toString())
 
         val viaGroup = Mutator.fromStrings(listOf("KOTLIN")).map { it.name }.toSet()
-        assertEquals(setOf("KOTLIN_ELVIS_ALWAYS_DEFAULT", "KOTLIN_ELVIS_NEVER_DEFAULT", "KOTLIN_SAFECALL_NEVER_NULL", "KOTLIN_STDLIB_SWAP"), viaGroup)
+        assertEquals(setOf("KOTLIN_ELVIS_ALWAYS_DEFAULT", "KOTLIN_ELVIS_NEVER_DEFAULT", "KOTLIN_SAFECALL_NEVER_NULL", "KOTLIN_STDLIB_SWAP", "KOTLIN_REMOVE_DISTINCT", "KOTLIN_REMOVE_SORTED"), viaGroup)
 
         val withDefaults = Mutator.fromStrings(listOf("DEFAULTS", "KOTLIN")).map { it.name }.toSet()
         assertTrue(viaGroup.all { it in withDefaults } && "MATH" in withDefaults, withDefaults.toString())

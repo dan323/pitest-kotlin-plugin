@@ -75,6 +75,8 @@ Select them with the `KOTLIN` group, or by name, **next to the set you already u
 | `KOTLIN_ELVIS_NEVER_DEFAULT` | `a ?: b` always yields `a`, even when null | a test with a null `a` |
 | `KOTLIN_SAFECALL_NEVER_NULL` | `a?.f()` calls `f` on a null `a` | a test with a null receiver |
 | `KOTLIN_STDLIB_SWAP` | `first` <-> `last`, `take` <-> `drop`, `startsWith` <-> `endsWith`, `coerceAtLeast` <-> `coerceAtMost`, `removePrefix` <-> `removeSuffix`, `indexOf` <-> `lastIndexOf`, `substringBefore` <-> `substringAfter`, `trimStart` <-> `trimEnd`, `Math.max` <-> `min`, ... | a test sensitive to the swap |
+| `KOTLIN_REMOVE_DISTINCT` | `l.distinct()` returns `l` with its duplicates (`Iterable` and `Sequence`) | a test with duplicate input |
+| `KOTLIN_REMOVE_SORTED` | `sorted()`, `sortedDescending()`, `sortedWith(c)` return the input order | a test with unsorted input that checks the order |
 
 PIT already ships mutants equivalent to the "never default" elvis (`REMOVE_CONDITIONALS_EQUAL_ELSE`, in `DEFAULTS`)
 and to "always null" for a safe call. What `DEFAULTS` lacks, and these add, is the other side of each, with names
