@@ -52,63 +52,68 @@ class KotlinWhenFilter : KotlinMutationFilter() {
     private fun MutationDetails.isNeverJump(): Boolean =
         mutator.endsWith("RemoveConditionalMutator_EQUAL_IF") || mutator.endsWith("RemoveConditionalMutator_ORDER_IF")
 
-    /**
-     * Whether the `new NoWhenBranchMatchedException` at [newIndex] is the compiler's fallback and not user code.
-     * The fallback is `new; dup; <init>()V; athrow`, only reached by jumps, and it carries the line of the `when`
-     * subject, strictly earlier than every instruction that jumps to it (the last branch's check). A user-written
-     * throw (an explicit `else` or `case`, an exception that is returned, or one built with a message) sits on the
-     * same line as its check or on a later one, so it fails the test; anything unconfirmed is kept.
-     *
-     * A throw that a `tableswitch` or `lookupswitch` can reach is never confirmed, whatever the line: an enum `when`
-     * is a `tableswitch` on the same line as its throw, which is indistinguishable from a one-line
-     * `else -> throw`, so the throw of an enum `when` is never dropped.
-     */
-    private fun List<AbstractInsnNode>.isGeneratedThrow(newIndex: Int): Boolean {
-        val new = this[newIndex] as? TypeInsnNode ?: return false
-        if (new.opcode != Opcodes.NEW || new.desc != EXCEPTION) return false
-        val dup = realAfter(newIndex) ?: return false
-        val init = realAfter(indexOf(dup)) as? MethodInsnNode ?: return false
-        val athrow = realAfter(indexOf(init)) ?: return false
-        if (dup.opcode != Opcodes.DUP || init.owner != EXCEPTION || init.name != "<init>" || init.desc != "()V" || athrow.opcode != Opcodes.ATHROW) {
-            return false
-        }
-        val labels = labelsAt(newIndex)
-        val throwLine = lineOf(newIndex) ?: return false
-        val sources = indices.filter { i -> val n = this[i]; n.jumpsTo(labels) }
-        return sources.isNotEmpty() && sources.all { i -> this[i] is JumpInsnNode && (lineOf(i) ?: return@all false) > throwLine }
-    }
-
-    private fun AbstractInsnNode.jumpsTo(labels: Set<LabelNode>): Boolean = when (this) {
-        is JumpInsnNode -> label in labels
-        is TableSwitchInsnNode -> dflt in labels || labels.any { it in this.labels }
-        is LookupSwitchInsnNode -> dflt in labels || labels.any { it in this.labels }
-        else -> false
-    }
-
-    /** Labels (and line/frame markers between them) directly in front of the instruction at [index]. */
-    private fun List<AbstractInsnNode>.labelsAt(index: Int): Set<LabelNode> {
-        val out = mutableSetOf<LabelNode>()
-        var i = index - 1
-        while (i >= 0 && this[i].opcode < 0) {
-            (this[i] as? LabelNode)?.let(out::add)
-            i--
-        }
-        return out
-    }
-
-    /** Source line in force at [index]: the nearest line number at or before it. */
-    private fun List<AbstractInsnNode>.lineOf(index: Int): Int? {
-        var i = index
-        while (i >= 0) {
-            (this[i] as? LineNumberNode)?.let { return it.line }
-            i--
-        }
-        return null
-    }
-
     private companion object {
         const val EXCEPTION = "kotlin/NoWhenBranchMatchedException"
     }
+}
+
+private const val EXCEPTION = "kotlin/NoWhenBranchMatchedException"
+
+/**
+ * Whether the `new NoWhenBranchMatchedException` at [newIndex] is the compiler's fallback and not user code.
+ * The fallback is `new; dup; <init>()V; athrow`, only reached by jumps, and it carries the line of the `when`
+ * subject, strictly earlier than every instruction that jumps to it (the last branch's check, a conditional jump). A user-written
+ * throw (an explicit `else` or `case`, an exception that is returned, or one built with a message) sits on the
+ * same line as its check or on a later one, so it fails the test; anything unconfirmed is kept.
+ *
+ * A throw that a `tableswitch`, `lookupswitch` or unconditional `goto` can reach is never confirmed, whatever the line: an enum `when`
+ * is a `tableswitch` on the same line as its throw, which is indistinguishable from a one-line
+ * `else -> throw`, so the throw of an enum `when` is never dropped.
+ */
+internal fun List<AbstractInsnNode>.isGeneratedThrow(newIndex: Int): Boolean {
+    val new = this[newIndex] as? TypeInsnNode ?: return false
+    if (new.opcode != Opcodes.NEW || new.desc != EXCEPTION) return false
+    val dup = realAfter(newIndex) ?: return false
+    val init = realAfter(indexOf(dup)) as? MethodInsnNode ?: return false
+    val athrow = realAfter(indexOf(init)) ?: return false
+    if (dup.opcode != Opcodes.DUP || init.owner != EXCEPTION || init.name != "<init>" || init.desc != "()V" || athrow.opcode != Opcodes.ATHROW) {
+        return false
+    }
+    val labels = labelsAt(newIndex)
+    val throwLine = lineOf(newIndex) ?: return false
+    val sources = indices.filter { i -> val n = this[i]; n.jumpsTo(labels) }
+    return sources.isNotEmpty() && sources.all { i -> this[i].isConditionalJump() && (lineOf(i) ?: return@all false) > throwLine }
+}
+
+private fun AbstractInsnNode.isConditionalJump(): Boolean =
+    this is JumpInsnNode && opcode != Opcodes.GOTO && opcode != Opcodes.JSR
+
+private fun AbstractInsnNode.jumpsTo(labels: Set<LabelNode>): Boolean = when (this) {
+    is JumpInsnNode -> label in labels
+    is TableSwitchInsnNode -> dflt in labels || labels.any { it in this.labels }
+    is LookupSwitchInsnNode -> dflt in labels || labels.any { it in this.labels }
+    else -> false
+}
+
+/** Labels (and line/frame markers between them) directly in front of the instruction at [index]. */
+private fun List<AbstractInsnNode>.labelsAt(index: Int): Set<LabelNode> {
+    val out = mutableSetOf<LabelNode>()
+    var i = index - 1
+    while (i >= 0 && this[i].opcode < 0) {
+        (this[i] as? LabelNode)?.let(out::add)
+        i--
+    }
+    return out
+}
+
+/** Source line in force at [index]: the nearest line number at or before it. */
+private fun List<AbstractInsnNode>.lineOf(index: Int): Int? {
+    var i = index
+    while (i >= 0) {
+        (this[i] as? LineNumberNode)?.let { return it.line }
+        i--
+    }
+    return null
 }
 
 class KotlinWhenFilterFactory : KotlinFilterFactory(
