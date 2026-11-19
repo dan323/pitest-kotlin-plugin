@@ -31,7 +31,7 @@ metadata confirms the fixtures are compiled by each). All 60 tests and every `e2
 filter change, so no shape-specific skips were needed. The publishing plugin needs Kotlin 2.2+, so on older versions it is
 not applied (`-PkotlinVersion` builds only compile and test; the published jar always uses the default).
 
-## 0.4.0: more stdlib swaps (`KOTLIN_STDLIB_SWAP`, issue #7 done)
+## 0.4.0: more stdlib swaps (`KOTLIN_STDLIB_SWAP`, issue #7 done) and `FKTWHEN` (issue #16 done)
 
 **Why.** On http-client the swap mutator generated 84 mutants and 24 survived, all of them test gaps (an unnamed request, an
 indented line). That yield is far better than on the first corpora (mockito-kotlin 3, kotlin-result 0), so more pairs are
@@ -54,6 +54,17 @@ with a second colon, `rest.removeSuffix("()")`, a trailing `.` in a file name):
 | `removePrefix` <-> `removeSuffix` | 12 | 9 | 3 |
 | `trimStart` <-> `trimEnd` (chars) | 5 | 3 | 2 |
 | `substringAfter` <-> `substringBefore` (all arguments) | 3 | 3 | 0 |
+
+### `FKTWHEN` (issue #16)
+
+**Result.** Shapes read with `javap` on Kotlin 2.1.20 to 2.4.21 (same on all): an enum `when` is a `tableswitch` whose default builds
+`new NoWhenBranchMatchedException`; a sealed `when` is an `instanceof` chain whose last check jumps to that `new`. Executing the
+mutants shows only two kinds are equivalent: the constructor call (unreachable) and the *never jump* `REMOVE_CONDITIONALS_*_IF` on the
+last check. The opposite mutants of that check (`NEGATE_CONDITIONALS`, `*_ELSE`) change behaviour for the last subtype and are kept.
+Consequence: with PIT's default and `DEFAULTS` mutators the filter drops nothing; it matters with `STRONGER`/`ALL`.
+
+On http-client (core, `ALL` mutators, filter off vs on): 7502 -> 7484 mutants, 18 removed, none `KILLED` (12 `NO_COVERAGE`,
+6 `SURVIVED`), none added. That meets the rule for a default-on filter.
 
 ## Measured and dropped
 
