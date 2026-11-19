@@ -233,6 +233,26 @@ class Whens {
         else -> 0
     }
 
+    fun explicitSealedElse(t: Token): String = when (t) {
+        is Word -> t.text
+        else -> throw NoWhenBranchMatchedException()
+    }
+
+    fun explicitEnumElse(c: Color): Int = when (c) {
+        Color.RED -> 1
+        Color.GREEN -> 2
+        else -> throw NoWhenBranchMatchedException()
+    }
+
+    fun madeWithMessage(): Exception = NoWhenBranchMatchedException("user failure")
+
+    fun madeAndReturned(): Exception = NoWhenBranchMatchedException()
+
+    fun thrownWithMessage(x: Int): Int {
+        if (x > 0) throw NoWhenBranchMatchedException("no branch")
+        return x
+    }
+
     fun plain(x: Int): Int = when (x) {
         1 -> 10
         2 -> 20

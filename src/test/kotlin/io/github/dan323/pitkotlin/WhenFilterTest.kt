@@ -68,6 +68,16 @@ class WhenFilterTest {
     }
 
     @Test
+    fun `a throw that user code writes is not touched`() {
+        val userThrows = listOf("explicitSealedElse", "explicitEnumElse", "madeWithMessage", "madeAndReturned", "thrownWithMessage")
+        for (m in userThrows) {
+            assertTrue(set.inMethod(m).any { it.mutator.endsWith("ConstructorCallMutator") } || m.startsWith("explicit"), m)
+            assertTrue(dropped(m).isEmpty(), "$m: ${names(dropped(m))}")
+        }
+        assertTrue(set.inMethod("madeAndReturned").any { it.mutator.endsWith("ConstructorCallMutator") })
+    }
+
+    @Test
     fun `a when with an else has nothing to drop`() {
         for (m in listOf("withElse", "plain")) assertTrue(dropped(m).isEmpty(), m)
     }
