@@ -53,11 +53,19 @@ parameter null checks), so this plugin does not repeat that.
 | `KOTLIN_ELVIS_ALWAYS_DEFAULT` | `a ?: b` always yields `b` | `REMOVE_CONDITIONALS_EQUAL_IF` (`STRONGER`) |
 | `KOTLIN_SAFECALL_NEVER_NULL` | `a?.f()` calls `f` on a null `a` | `REMOVE_CONDITIONALS_EQUAL_IF` (`STRONGER`) |
 | `KOTLIN_STDLIB_SWAP` | `first`<->`last`, `take`<->`drop`, `startsWith`<->`endsWith`, `coerceAtLeast`<->`coerceAtMost`, `removePrefix`<->`removeSuffix`, `indexOf`<->`lastIndexOf`, `substringBefore`<->`substringAfter`, `trimStart`<->`trimEnd`, `Math.max`<->`min`... | none |
+| `KOTLIN_REMOVE_DISTINCT` | `distinct()` on an `Iterable` or `Sequence` is removed (the result keeps duplicates) | none |
+| `KOTLIN_REMOVE_SORTED` | `sorted()`, `sortedDescending()`, `sortedWith(c)` are removed (the result keeps the input order) | none |
 
 `DEFAULTS` lacks the always-default side of an elvis and the never-null side of a safe call; the Kotlin mutators add them
 with names that say which side no test exercises. A survivor on `*_NEVER_DEFAULT` means no test supplies a null; on
 `*_ALWAYS_DEFAULT`, no test supplies a non-null. The stdlib swap needs both operands to share a descriptor and only
 applies to real calls: inline functions (`filter`, `any`, `map`, `isNotBlank`...) leave none.
+
+The removal mutators are equivalent when the call is redundant: `distinct()` on input that cannot repeat, `sorted()` on a list
+that is sorted again or is only inserted into a map (`environment.sorted().forEach { map.putIfAbsent(it, ...) }` changes
+only the insertion order), or on a one-element list. `sortedBy` / `distinctBy` are inline and not mutated.
+`KOTLIN_STDLIB_SWAP` also swaps `sorted` for `sortedDescending`, so the `KOTLIN` group gives a `sorted()` call two mutants,
+the swap and the removal. A test that feeds unsorted input and asserts the order of the result usually kills both.
 
 Some swaps are equivalent for a whole class of inputs, not for the code: `indexOf` <-> `lastIndexOf` when the searched
 character occurs once, `first` <-> `last` on a one-element list, `removePrefix` <-> `removeSuffix` when neither end matches
