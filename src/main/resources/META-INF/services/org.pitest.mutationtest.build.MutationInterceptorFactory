@@ -6,3 +6,4 @@ io.github.dan323.pitkotlin.KotlinForInlineFilterFactory
 io.github.dan323.pitkotlin.KotlinElvisDuplicateFilterFactory
 io.github.dan323.pitkotlin.KotlinMessageFilterFactory
 io.github.dan323.pitkotlin.KotlinNonNullFilterFactory
+io.github.dan323.pitkotlin.KotlinWhenFilterFactory

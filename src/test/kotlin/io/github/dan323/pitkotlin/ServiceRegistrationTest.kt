@@ -18,7 +18,7 @@ class ServiceRegistrationTest {
             .filter { it.javaClass.packageName == "io.github.dan323.pitkotlin" }
             .associate { it.provides().name() to it.provides() }
 
-        assertTrue(ours.keys == setOf("fktinline", "fktintrinsics", "fktcoro", "fktunit", "fktforinline", "fktelvisdedup", "fktmessage", "fktnonnull"), ours.keys.toString())
+        assertTrue(ours.keys == setOf("fktinline", "fktintrinsics", "fktcoro", "fktunit", "fktforinline", "fktelvisdedup", "fktmessage", "fktnonnull", "fktwhen"), ours.keys.toString())
         // FKTMESSAGE is a heuristic that can hide a test gap, so it is opt-in.
         assertEquals(setOf("fktmessage"), ours.filterValues { !it.isOnByDefault }.keys)
     }

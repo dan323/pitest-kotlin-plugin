@@ -187,3 +187,91 @@ class NonNulls {
 
     fun mapElvis(m: Map<String, String>, k: String): String = m[k] ?: "d"
 }
+
+enum class Color { RED, GREEN, BLUE }
+
+sealed class Shape {
+    class Circle(val r: Int) : Shape()
+    class Square(val s: Int) : Shape()
+    object Empty : Shape()
+}
+
+sealed interface Token
+class Word(val text: String) : Token
+class Number(val value: Int) : Token
+
+class Whens {
+    fun enumExpr(c: Color): Int = when (c) {
+        Color.RED -> 1
+        Color.GREEN -> 2
+        Color.BLUE -> 3
+    }
+
+    fun enumStmt(c: Color): String {
+        var out = ""
+        when (c) {
+            Color.RED -> out = "r"
+            Color.GREEN -> out = "g"
+            Color.BLUE -> out = "b"
+        }
+        return out
+    }
+
+    fun sealedExpr(s: Shape): Int = when (s) {
+        is Shape.Circle -> s.r * 2
+        is Shape.Square -> s.s * 4
+        Shape.Empty -> 0
+    }
+
+    fun sealedInterface(t: Token): String = when (t) {
+        is Word -> t.text
+        is Number -> t.value.toString()
+    }
+
+    fun withElse(c: Color): Int = when (c) {
+        Color.RED -> 1
+        else -> 0
+    }
+
+    fun explicitSealedElse(t: Token): String = when (t) {
+        is Word -> t.text
+        else -> throw NoWhenBranchMatchedException()
+    }
+
+    fun explicitEnumElse(c: Color): Int = when (c) {
+        Color.RED -> 1
+        Color.GREEN -> 2
+        else -> throw NoWhenBranchMatchedException()
+    }
+
+    fun oneLineEnumElse(c: Color): Int = when (c) { Color.RED -> 1; Color.GREEN -> 2; else -> throw NoWhenBranchMatchedException() }
+
+    fun oneLineSealedElse(t: Token): String = when (t) { is Word -> t.text; else -> throw NoWhenBranchMatchedException() }
+
+    fun oneLineCaseThrow(x: Int): Int = when (x) { 1 -> throw NoWhenBranchMatchedException(); 2 -> 2; 3 -> 3; else -> 4 }
+
+    fun laterSwitchCaseThrow(x: Int): Int {
+        val y = when (x) {
+            1 -> throw NoWhenBranchMatchedException()
+            2 -> 2
+            3 -> 3
+            else -> 4
+        }
+        return y
+    }
+
+    fun madeWithMessage(): Exception = NoWhenBranchMatchedException("user failure")
+
+    fun madeAndReturned(): Exception = NoWhenBranchMatchedException()
+
+    fun thrownWithMessage(x: Int): Int {
+        if (x > 0) throw NoWhenBranchMatchedException("no branch")
+        return x
+    }
+
+    fun plain(x: Int): Int = when (x) {
+        1 -> 10
+        2 -> 20
+        else -> 0
+    }
+}
