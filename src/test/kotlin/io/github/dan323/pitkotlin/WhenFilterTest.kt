@@ -60,18 +60,19 @@ class WhenFilterTest {
     }
 
     @Test
-    fun `an enum when only loses the throw constructor, its switch mutants stay`() {
+    fun `an enum when loses nothing, its throw cannot be told from a one-line else`() {
         for (m in listOf("enumExpr", "enumStmt")) {
-            assertEquals(listOf("ConstructorCallMutator"), names(dropped(m)), m)
+            assertTrue(dropped(m).isEmpty(), m)
             assertTrue(set.inMethod(m).any { it.mutator.contains("Switch") })
+            assertTrue(set.inMethod(m).any { it.mutator.endsWith("ConstructorCallMutator") })
         }
     }
 
     @Test
     fun `a throw that user code writes is not touched`() {
-        val userThrows = listOf("explicitSealedElse", "explicitEnumElse", "madeWithMessage", "madeAndReturned", "thrownWithMessage")
+        val userThrows = listOf("explicitSealedElse", "explicitEnumElse", "oneLineEnumElse", "oneLineSealedElse", "oneLineCaseThrow", "madeWithMessage", "madeAndReturned", "thrownWithMessage")
         for (m in userThrows) {
-            assertTrue(set.inMethod(m).any { it.mutator.endsWith("ConstructorCallMutator") } || m.startsWith("explicit"), m)
+            assertTrue(set.inMethod(m).any { it.mutator.endsWith("ConstructorCallMutator") }, m)
             assertTrue(dropped(m).isEmpty(), "$m: ${names(dropped(m))}")
         }
         assertTrue(set.inMethod("madeAndReturned").any { it.mutator.endsWith("ConstructorCallMutator") })

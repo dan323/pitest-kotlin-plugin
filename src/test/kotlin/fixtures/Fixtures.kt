@@ -244,6 +244,12 @@ class Whens {
         else -> throw NoWhenBranchMatchedException()
     }
 
+    fun oneLineEnumElse(c: Color): Int = when (c) { Color.RED -> 1; Color.GREEN -> 2; else -> throw NoWhenBranchMatchedException() }
+
+    fun oneLineSealedElse(t: Token): String = when (t) { is Word -> t.text; else -> throw NoWhenBranchMatchedException() }
+
+    fun oneLineCaseThrow(x: Int): Int = when (x) { 1 -> throw NoWhenBranchMatchedException(); 2 -> 2; 3 -> 3; else -> 4 }
+
     fun madeWithMessage(): Exception = NoWhenBranchMatchedException("user failure")
 
     fun madeAndReturned(): Exception = NoWhenBranchMatchedException()

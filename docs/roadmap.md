@@ -63,9 +63,11 @@ mutants shows only two kinds are equivalent: the constructor call (unreachable) 
 last check. The opposite mutants of that check (`NEGATE_CONDITIONALS`, `*_ELSE`) change behaviour for the last subtype and are kept.
 Consequence: with PIT's default and `DEFAULTS` mutators the filter drops nothing; it matters with `STRONGER`/`ALL`.
 
-The throw is only treated as the compiler's when it is `new; dup; <init>()V; athrow`, reached by a jump or switch default from a
-later line (or an enum `tableswitch` on the same line). A user-written throw (an explicit `else`, `NoWhenBranchMatchedException("msg")`,
-one that is returned) is kept; so is a generated one on a single-line `when`, which cannot be told apart from user code.
+The throw is only treated as the compiler's when it is `new; dup; <init>()V; athrow` and every jump to it comes from a strictly
+later line than the throw (the last branch's check; the throw carries the line of the `when` subject). A user-written throw (an
+explicit `else` or `case`, `NoWhenBranchMatchedException("msg")`, one that is returned) is kept. An enum `when` is a `tableswitch`
+on the same line as its throw, which looks exactly like a one-line `else -> throw`, so nothing is dropped for enum `when`s and a
+generated throw on a single-line sealed `when` is kept too. Tests cover one-line `else` and `case` throws.
 
 On http-client (core, `ALL` mutators, filter off vs on): 7502 -> 7487 mutants, 15 removed, none `KILLED` (9 `NO_COVERAGE`,
 6 `SURVIVED`), none added. That meets the rule for a default-on filter.

@@ -17,7 +17,7 @@ import org.pitest.mutationtest.engine.MutationDetails
  *
  * Two shapes are dropped:
  *
- *  - the constructor call that builds the throw;
+ *  - the constructor call that builds the throw (sealed `when` only);
  *  - PIT's "replaced the check with true" mutants (`REMOVE_CONDITIONALS_*_IF`, the *never jump* side) on a
  *    conditional jump whose target is that throw. That jump is the last branch's type check; making it
  *    always succeed changes nothing, because the value has already matched no other branch.
@@ -26,7 +26,7 @@ import org.pitest.mutationtest.engine.MutationDetails
  * jump. They send a value that does match the last branch to the throw, so any test that reaches that branch
  * kills them, and a survivor means that branch is untested.
  *
- * User-written throws (an explicit `else`, `NoWhenBranchMatchedException("msg")`, one that is returned) are kept: see
+ * User-written throws (an explicit `else` or `case`, `NoWhenBranchMatchedException("msg")`, one that is returned) are kept: see
  * `isGeneratedThrow`. Only a bytecode pattern, no test results. PIT's default mutators generate neither shape
  * (`REMOVE_CONDITIONALS_*_IF` is in `STRONGER`/`ALL`, the constructor-call removal in `ALL`).
  */
@@ -54,10 +54,13 @@ class KotlinWhenFilter : KotlinMutationFilter() {
 
     /**
      * Whether the `new NoWhenBranchMatchedException` at [newIndex] is the compiler's fallback and not user code.
-     * The fallback is `new; dup; <init>()V; athrow`, only reached by a jump or switch default, and it carries the
-     * line of the `when` subject: earlier than the last branch's check that jumps to it, or equal to the line of
-     * the enum `tableswitch` whose default it is. A user-written throw (an explicit `else`, an exception that is
-     * returned, or one built with a message) fails one of these tests, and anything unconfirmed is kept.
+     * The fallback is `new; dup; <init>()V; athrow`, only reached by jumps, and it carries the line of the `when`
+     * subject, strictly earlier than every instruction that jumps to it (the last branch's check). A user-written
+     * throw (an explicit `else` or `case`, an exception that is returned, or one built with a message) sits on the
+     * same line as its check or on a later one, so it fails the test; anything unconfirmed is kept.
+     *
+     * An enum `when` is a `tableswitch` on the same line as its throw, which is indistinguishable from a one-line
+     * `else -> throw`, so the throw of an enum `when` is never dropped.
      */
     private fun List<AbstractInsnNode>.isGeneratedThrow(newIndex: Int): Boolean {
         val new = this[newIndex] as? TypeInsnNode ?: return false
@@ -71,11 +74,7 @@ class KotlinWhenFilter : KotlinMutationFilter() {
         val labels = labelsAt(newIndex)
         val throwLine = lineOf(newIndex) ?: return false
         val sources = indices.filter { i -> val n = this[i]; n.jumpsTo(labels) }
-        return sources.isNotEmpty() && sources.all { i ->
-            val line = lineOf(i) ?: return@all false
-            val source = this[i]
-            line > throwLine || (line == throwLine && (source is TableSwitchInsnNode || source is LookupSwitchInsnNode))
-        }
+        return sources.isNotEmpty() && sources.all { i -> (lineOf(i) ?: return@all false) > throwLine }
     }
 
     private fun AbstractInsnNode.jumpsTo(labels: Set<LabelNode>): Boolean = when (this) {
