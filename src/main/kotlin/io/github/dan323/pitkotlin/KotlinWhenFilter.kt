@@ -59,7 +59,8 @@ class KotlinWhenFilter : KotlinMutationFilter() {
      * throw (an explicit `else` or `case`, an exception that is returned, or one built with a message) sits on the
      * same line as its check or on a later one, so it fails the test; anything unconfirmed is kept.
      *
-     * An enum `when` is a `tableswitch` on the same line as its throw, which is indistinguishable from a one-line
+     * A throw that a `tableswitch` or `lookupswitch` can reach is never confirmed, whatever the line: an enum `when`
+     * is a `tableswitch` on the same line as its throw, which is indistinguishable from a one-line
      * `else -> throw`, so the throw of an enum `when` is never dropped.
      */
     private fun List<AbstractInsnNode>.isGeneratedThrow(newIndex: Int): Boolean {
@@ -74,7 +75,7 @@ class KotlinWhenFilter : KotlinMutationFilter() {
         val labels = labelsAt(newIndex)
         val throwLine = lineOf(newIndex) ?: return false
         val sources = indices.filter { i -> val n = this[i]; n.jumpsTo(labels) }
-        return sources.isNotEmpty() && sources.all { i -> (lineOf(i) ?: return@all false) > throwLine }
+        return sources.isNotEmpty() && sources.all { i -> this[i] is JumpInsnNode && (lineOf(i) ?: return@all false) > throwLine }
     }
 
     private fun AbstractInsnNode.jumpsTo(labels: Set<LabelNode>): Boolean = when (this) {

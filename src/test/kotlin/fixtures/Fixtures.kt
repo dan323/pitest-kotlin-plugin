@@ -250,6 +250,16 @@ class Whens {
 
     fun oneLineCaseThrow(x: Int): Int = when (x) { 1 -> throw NoWhenBranchMatchedException(); 2 -> 2; 3 -> 3; else -> 4 }
 
+    fun laterSwitchCaseThrow(x: Int): Int {
+        val y = when (x) {
+            1 -> throw NoWhenBranchMatchedException()
+            2 -> 2
+            3 -> 3
+            else -> 4
+        }
+        return y
+    }
+
     fun madeWithMessage(): Exception = NoWhenBranchMatchedException("user failure")
 
     fun madeAndReturned(): Exception = NoWhenBranchMatchedException()
