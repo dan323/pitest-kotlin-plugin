@@ -28,8 +28,8 @@ Each is a PIT feature. Switch one off with `-NAME`, on with `+NAME`, e.g. `featu
 - **`FKTUNIT`**: return-value mutants on `return Unit.INSTANCE`.
 - **`FKTFORINLINE`**: everything in `name$$forInline` methods (copies of inline suspend functions nothing calls).
 - **`FKTELVISDEDUP`**: PIT's own conditional mutants on an elvis or safe-call jump that this plugin's mutators duplicate.
-- **`FKTWHEN`**: the unreachable `else -> throw NoWhenBranchMatchedException` of an exhaustive `when` on an enum or sealed type. It drops the constructor call and PIT's "check always succeeds" mutant (`REMOVE_CONDITIONALS_*_IF`, in `STRONGER`/`ALL`) on the last branch's check, which cannot change behaviour. `NEGATE_CONDITIONALS` and the "always fails" mutant on that check are kept: they send a value that matches the last branch to the throw, so a survivor means no test reaches that branch.
   Each is dropped only when its equivalent from this plugin is present at the same instruction.
+- **`FKTWHEN`**: the unreachable `else -> throw NoWhenBranchMatchedException` of an exhaustive `when` on an enum or sealed type. It drops the constructor call and PIT's "check always succeeds" mutant (`REMOVE_CONDITIONALS_*_IF`, in `STRONGER`/`ALL`) on the last branch's check, which cannot change behaviour. `NEGATE_CONDITIONALS` and the "always fails" mutant on that check are kept: they send a value that matches the last branch to the throw, so a survivor means no test reaches that branch.
 - **`FKTNONNULL`**: the never-null side of an elvis or safe call (`KOTLIN_ELVIS_NEVER_DEFAULT`,
   `KOTLIN_SAFECALL_NEVER_NULL`, PIT's identical `REMOVE_CONDITIONALS_EQUAL_ELSE` / `_EQUAL_IF`) when the value cannot be
   null. Kotlin emits the check even for non-null values, and in `a?.b ?: d` or `a?.b()?.c()` the later jumps only see what
