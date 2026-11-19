@@ -64,6 +64,8 @@ applies to real calls: inline functions (`filter`, `any`, `map`, `isNotBlank`...
 The removal mutators are equivalent when the call is redundant: `distinct()` on input that cannot repeat, `sorted()` on a list
 that is sorted again or is only inserted into a map (`environment.sorted().forEach { map.putIfAbsent(it, ...) }` changes
 only the insertion order), or on a one-element list. `sortedBy` / `distinctBy` are inline and not mutated.
+`KOTLIN_STDLIB_SWAP` also swaps `sorted` for `sortedDescending`, so the `KOTLIN` group gives a `sorted()` call two mutants,
+the swap and the removal. A test that feeds unsorted input and asserts the order of the result usually kills both.
 
 Some swaps are equivalent for a whole class of inputs, not for the code: `indexOf` <-> `lastIndexOf` when the searched
 character occurs once, `first` <-> `last` on a one-element list, `removePrefix` <-> `removeSuffix` when neither end matches

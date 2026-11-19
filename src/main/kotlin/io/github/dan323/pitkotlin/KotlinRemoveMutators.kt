@@ -34,14 +34,12 @@ class KotlinRemoveSortedMutator : MethodMutatorFactory {
     override fun getName(): String = "KOTLIN_REMOVE_SORTED"
 }
 
-/** How to leave the stack as the call would have, without running it. */
-internal sealed interface Removal {
-    /** `Sequence -> Sequence`: the receiver already has the result's type, so only the [pops] extra arguments go. */
-    data class Drop(val pops: Int) : Removal
-
-    /** `Iterable -> List`: call `toList()` on the receiver, after dropping [pops] extra arguments. */
-    data class ToList(val pops: Int) : Removal
-}
+/**
+ * How to remove a call and still leave the stack as the call would have: pop the [pops] extra arguments (the
+ * comparator of `sortedWith`), then call `toList()` when the result is a `List` (`Iterable -> List`) or
+ * leave the receiver as it is when the result has its own type (`Sequence -> Sequence`).
+ */
+internal data class Removal(val pops: Int, val toList: Boolean)
 
 internal object RemovableCalls {
     private const val COLLECTIONS = "kotlin/collections/CollectionsKt"
@@ -50,17 +48,17 @@ internal object RemovableCalls {
     private const val SEQUENCE_SEQUENCE = "(Lkotlin/sequences/Sequence;)Lkotlin/sequences/Sequence;"
 
     val distinct: Map<StdlibCall, Removal> = mapOf(
-        StdlibCall(COLLECTIONS, "distinct", ITERABLE_LIST) to Removal.ToList(0),
-        StdlibCall(SEQUENCES, "distinct", SEQUENCE_SEQUENCE) to Removal.Drop(0),
+        StdlibCall(COLLECTIONS, "distinct", ITERABLE_LIST) to Removal(0, true),
+        StdlibCall(SEQUENCES, "distinct", SEQUENCE_SEQUENCE) to Removal(0, false),
     )
 
     val sorted: Map<StdlibCall, Removal> = mapOf(
-        StdlibCall(COLLECTIONS, "sorted", ITERABLE_LIST) to Removal.ToList(0),
-        StdlibCall(COLLECTIONS, "sortedDescending", ITERABLE_LIST) to Removal.ToList(0),
-        StdlibCall(COLLECTIONS, "sortedWith", "(Ljava/lang/Iterable;Ljava/util/Comparator;)Ljava/util/List;") to Removal.ToList(1),
-        StdlibCall(SEQUENCES, "sorted", SEQUENCE_SEQUENCE) to Removal.Drop(0),
-        StdlibCall(SEQUENCES, "sortedDescending", SEQUENCE_SEQUENCE) to Removal.Drop(0),
-        StdlibCall(SEQUENCES, "sortedWith", "(Lkotlin/sequences/Sequence;Ljava/util/Comparator;)Lkotlin/sequences/Sequence;") to Removal.Drop(1),
+        StdlibCall(COLLECTIONS, "sorted", ITERABLE_LIST) to Removal(0, true),
+        StdlibCall(COLLECTIONS, "sortedDescending", ITERABLE_LIST) to Removal(0, true),
+        StdlibCall(COLLECTIONS, "sortedWith", "(Ljava/lang/Iterable;Ljava/util/Comparator;)Ljava/util/List;") to Removal(1, true),
+        StdlibCall(SEQUENCES, "sorted", SEQUENCE_SEQUENCE) to Removal(0, false),
+        StdlibCall(SEQUENCES, "sortedDescending", SEQUENCE_SEQUENCE) to Removal(0, false),
+        StdlibCall(SEQUENCES, "sortedWith", "(Lkotlin/sequences/Sequence;Ljava/util/Comparator;)Lkotlin/sequences/Sequence;") to Removal(1, false),
     )
 }
 
@@ -75,15 +73,12 @@ private class RemoveCallVisitor(
         if (removal != null) {
             val id = context.registerMutation(factory, "removed call to $owner::$name")
             if (context.shouldMutate(id)) {
-                when (removal) {
-                    is Removal.Drop -> repeat(removal.pops) { mv.visitInsn(Opcodes.POP) }
-                    is Removal.ToList -> {
-                        repeat(removal.pops) { mv.visitInsn(Opcodes.POP) }
-                        mv.visitMethodInsn(
-                            Opcodes.INVOKESTATIC, "kotlin/collections/CollectionsKt", "toList",
-                            "(Ljava/lang/Iterable;)Ljava/util/List;", false,
-                        )
-                    }
+                repeat(removal.pops) { mv.visitInsn(Opcodes.POP) }
+                if (removal.toList) {
+                    mv.visitMethodInsn(
+                        Opcodes.INVOKESTATIC, "kotlin/collections/CollectionsKt", "toList",
+                        "(Ljava/lang/Iterable;)Ljava/util/List;", false,
+                    )
                 }
                 return
             }

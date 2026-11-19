@@ -1,5 +1,7 @@
 package io.github.dan323.pitkotlin
 
+import java.lang.invoke.MethodType
+import java.lang.reflect.Modifier
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -57,6 +59,22 @@ class RemoveMutatorsTest {
         for (m in distinct.mutants) distinct.instance(m)
         for (m in sorted.mutants) sorted.instance(m)
         assertEquals("removed call to kotlin/collections/CollectionsKt::distinct", distinct.inMethod("distinct").single().description)
+    }
+
+    @Test
+    fun `every removable call exists in the stdlib on the classpath with the stated descriptor and a matching result type`() {
+        val loader = javaClass.classLoader
+        for ((call, removal) in RemovableCalls.distinct + RemovableCalls.sorted) {
+            val type = MethodType.fromMethodDescriptorString(call.descriptor, loader)
+            val owner = Class.forName(call.owner.replace('/', '.'), false, loader)
+            val method = owner.methods.firstOrNull { it.name == call.name && it.parameterTypes.contentEquals(type.parameterArray()) && it.returnType == type.returnType() }
+                ?: error("${call.owner}.${call.name}${call.descriptor} does not exist")
+            assertTrue(Modifier.isStatic(method.modifiers), "$call must be static")
+            // The receiver stays on the stack, so it must already be what the call returned (a Sequence) or be convertible (toList).
+            assertEquals(removal.toList, type.returnType() == List::class.java, "$call")
+            if (!removal.toList) assertEquals(type.parameterType(0), type.returnType(), "$call")
+            assertEquals(1 + removal.pops, type.parameterCount(), "$call")
+        }
     }
 
     @Test
