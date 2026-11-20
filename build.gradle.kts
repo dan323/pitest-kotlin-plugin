@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "io.github.dan323"
-version = "0.3.0"
+version = "0.4.0"
 
 val pitestVersion = "1.30.2"
 
