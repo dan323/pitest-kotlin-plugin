@@ -18,7 +18,7 @@ With the [gradle-pitest-plugin](https://gradle-pitest-plugin.solidsoft.info/):
 
 ```kotlin
 dependencies {
-    pitest("io.github.dan323:pitest-kotlin-plugin:0.3.0")
+    pitest("io.github.dan323:pitest-kotlin-plugin:0.4.0")
 }
 
 pitest {
