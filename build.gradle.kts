@@ -14,7 +14,7 @@ val pitestVersion = "1.30.2"
 // The publishing plugin needs Kotlin 2.2+. Older -PkotlinVersion builds (the CI matrix) only compile and test.
 val kotlinVersion = providers.gradleProperty("kotlinVersion").getOrElse("2.4.21")
 val canPublish = kotlinVersion.split('.').let { it[0].toInt() > 2 || (it[0].toInt() == 2 && it[1].toInt() >= 2) }
-if (canPublish) apply(plugin = "com.vanniktech.maven.publish")
+if (canPublish) pluginManager.apply("com.vanniktech.maven.publish")
 
 repositories {
     mavenCentral()
@@ -25,14 +25,15 @@ dependencies {
     compileOnly("org.pitest:pitest:$pitestVersion")
     compileOnly("org.pitest:pitest-entry:$pitestVersion")
 
-    testImplementation("org.pitest:pitest:$pitestVersion")
-    testImplementation("org.pitest:pitest-entry:$pitestVersion")
     testImplementation(kotlin("test"))
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
+
+// Tests need the same PIT classes that are compileOnly for the plugin jar; extending avoids declaring them twice.
+configurations.testImplementation { extendsFrom(configurations.compileOnly.get()) }
 
 kotlin {
     compilerOptions {
